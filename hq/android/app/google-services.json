@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "876728981578",
+    "project_id": "matrix-platform",
+    "storage_bucket": "matrix-platform.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:876728981578:android:6c583b260e6b0ee0cdaeb3",
+        "android_client_info": {
+          "package_name": "com.hejitech.matrix_hq"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDG7ivaEpDJVbUO5lMKBm1Mow3quJpSb1g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
