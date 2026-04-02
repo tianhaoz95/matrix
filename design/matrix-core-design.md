@@ -60,23 +60,26 @@ The reference implementation uses **Appwrite** as the service provider.
 
 ---
 
-## 4. UI/UX Design
+## 4. UI/UX Design & Brand Guidelines
 
-### 4.1 Authentication & Onboarding
-*   **The Matrix Entry:** A themed login/signup interface ("The Construct").
-*   **Workspace Selector:** After authentication, a clean interface allows users to select an existing workspace or "Initialize a New Simulation" (create a new workspace).
+### 4.1 Visual Identity
+*   **Design Guideline:** All interfaces must strictly adhere to the principles defined in `design/ui/v1/guideline/DESIGN.md`.
+*   **Iconography & Logo:** The primary visual identity is defined by `design/ui/v1/logo/screen.png`. This asset should be used for app icons, splash screens, and branding within the HQ and Agent Client.
 
 ### 4.2 HQ: The Command Center
 *   **Aesthetic:** *Brutalist-Refined*. A dark, high-contrast theme (Matrix Green/Deep Gray) with clean typography (JetBrains Mono/Inter).
+*   **UI Mockups:** Refer to the detailed mockups in `design/ui/v1/app/hq/` for:
+    *   **Onboarding:** `sign_in/`, `sign_up/`, `forgot_password/`
+    *   **Operation:** `dashboard/`, `new_task/`, `task_detail/`, `profile/`
 *   **Responsive Layout:** 
     *   **Desktop/Web:** Multi-pane dashboard with persistent sidebars for navigation and agent status.
     *   **Mobile:** Tab-based interface focusing on the Oracle's Feed and active task tracking.
-*   **The Oracle's Feed:** A prominent top-level summary using "Human-Centric NLP" to explain organizational status.
-*   **The Matrix (Kanban):** A multi-lane board tracking tasks: `Backlog`, `Architect Review`, `In Progress`, `Validation`, `Complete`. (Transitions to vertical list-view on mobile).
-*   **Agent Registry:** A sidebar showing connected clients, their roles, and their "Capability Statements".
 
 ### 4.3 Client: The Operator Interface
-*   **Minimalist Dashboard:** Focused on throughput and local environment health.
+*   **Aesthetic:** Minimalist and high-performance, focused on throughput and local environment health.
+*   **UI Mockups:** Refer to the detailed mockups in `design/ui/v1/app/agent/` for:
+    *   **Onboarding:** `sign_in/`
+    *   **Configuration:** `settings/`
 *   **Capability Explorer:** A dedicated screen to initiate "System Scans" and approve Markdown-based capability reports.
 *   **The Log Stream:** Realtime terminal-like output showing the agent's internal thought process (Chain-of-Thought).
 *   **Physical Feedback (Sentinel Only):** Visual indicators of connected hardware status.
