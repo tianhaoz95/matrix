@@ -24,16 +24,15 @@ The system is designed for **asynchronous autonomy**: humans provide high-level 
 
 ---
 
-## 3. Tech Stack & Abstraction Layer
+## 3. Infrastructure & Tech Stack
 
-### 3.0 The MSP Abstraction Layer
+### 3.1 The MSP Abstraction Layer
 The Matrix utilizes a dependency injection pattern to interact with backend services. Core interfaces (Providers) are defined in both Flutter (Dart) and Rust:
-
 *   **`IAuthProvider`**: Handles signup, login, session persistence, and workspace (team) management.
 *   **`IDataProvider`**: Handles CRUD operations and Realtime event subscriptions for all collections (Tasks, Agents, Logs).
 *   **`IStorageProvider`**: Handles file uploads (artifacts, logs) and retrieval.
 
-### 3.1 Primary Implementation: Appwrite
+### 3.2 Primary Implementation: Appwrite
 The reference implementation uses **Appwrite** as the service provider.
 *   **Frontend:** **Flutter (Web/Desktop/Mobile)**.
 *   **Backend-as-a-Service:**
@@ -42,76 +41,73 @@ The reference implementation uses **Appwrite** as the service provider.
     *   **Realtime:** Uses Appwrite Realtime for WebSocket synchronization.
     *   **Storage:** Implements `IStorageProvider` using Appwrite Buckets.
 
-### 3.2 The Agent Client
+### 3.3 The Agent Client
 *   **Frontend/Controller:** **Flutter (Desktop/Android/iOS)**.
-*   **Core Logic:** **Rust** (integrated via `flutter_rust_bridge`). Handles high-performance tasks utilizing optimized libraries from `vibe-kanban`:
+*   **Authentication & Connection:**
+    *   **User Sign-In:** The agent client uses the `IAuthProvider` to sign in.
+    *   **Workspace Selection:** Upon sign-in, the user selects the workspace the agent should join via the MSP.
+    *   **Secure Session:** The MSP manages the secure, persistent session.
+*   **Core Logic (Rust):** Integrated via `flutter_rust_bridge`, utilizing optimized libraries from `vibe-kanban`:
     *   **Agentic Coding Framework:** Utilizes `vibe-kanban/services/container.rs` and `StandardCodingAgentExecutor` to manage complex coding turns, including planning and self-correction.
     *   **Model Context Protocol (MCP):** Implements an MCP Task Server to provide LLMs (like Gemini) with standardized tools for repository access, workspace management, and task attempts.
-    *   **Codebase Intelligence:** Leverages `vibe-kanban/file_ranker` for RAG-based file discovery and `DiffStream` for real-time code change visualization in the HQ.
+    *   **Codebase Intelligence:** Leverages `vibe-kanban/file_ranker` for RAG-based file discovery and `DiffStream` for real-time code change visualization.
     *   **Git Worktree Management:** Powered by `vibe-kanban/worktree-manager`, enabling isolated feature development.
     *   **Task Execution:** Powered by `vibe-kanban/executors`, providing a unified interface for shell and tool calls.
-...
-### 5.4 AI Coding Agent Workflow
-When the Architect delegates a code-related task to an Agent, the client initiates the following specialized loop:
-1.  **Environment Setup:** Using `ContainerService`, the agent creates a dedicated git worktree and initializes an `ExecutionProcess`.
-2.  **Context Retrieval:** The `FileRanker` identifies relevant files to populate the LLM's context window.
-3.  **The Coding Turn:** The Agent executes a series of "turns" using the `StandardCodingAgentExecutor`, streaming real-time diffs back to the HQ via `DiffStream`.
-4.  **Verification:** The Agent runs automated tests within its container to verify the fix.
-5.  **Submission:** Upon successful verification, the Agent updates the Task Markdown with its changes and marks it for Architect review.
+    *   **Local Orchestration:** Planning sub-tasks, managing local state, and executing tool calls.
+    *   **LLM Interface:** Integration with remote APIs (OpenAI, Anthropic, Gemini) or **optional** local LLM orchestration (via `llama-cpp` or `candle`).
+    *   **System Exploration:** Autonomous discovery of local tools (git, compilers, ADB), hardware (USB devices, GPUs), and system resources.
+    *   **Hardware Interfacing:** For Sentinels (USB/Serial/Bluetooth/ADB).
 
 ---
 
 ## 4. UI/UX Design
 
-### 4.0 Authentication & Onboarding
+### 4.1 Authentication & Onboarding
 *   **The Matrix Entry:** A themed login/signup interface ("The Construct").
 *   **Workspace Selector:** After authentication, a clean interface allows users to select an existing workspace or "Initialize a New Simulation" (create a new workspace).
 
-### 4.1 HQ: The Command Center
+### 4.2 HQ: The Command Center
 *   **Aesthetic:** *Brutalist-Refined*. A dark, high-contrast theme (Matrix Green/Deep Gray) with clean typography (JetBrains Mono/Inter).
-*   **Responsive Multi-Platform Layout:** 
-    *   **Desktop/Web:** A multi-pane dashboard with persistent sidebars for navigation and agent status.
-    *   **Mobile:** A tab-based or bottom-navigation interface focusing on the Oracle's Feed and active task tracking, with collapsible "drawers" for the Agent Registry.
-*   **The Oracle's Feed:** A prominent top-level summary. Uses "Human-Centric NLP" to explain what the organization is doing *right now*.
-*   **The Matrix (Kanban):** A multi-lane board tracking tasks: `Backlog`, `Architect Review`, `In Progress`, `Validation`, `Complete`. (Transitions to a vertical list-view on mobile).
-*   **Agent Registry:** A sidebar showing connected clients, their roles, and their "Capability Statements" (Markdown-based skill descriptions).
+*   **Responsive Layout:** 
+    *   **Desktop/Web:** Multi-pane dashboard with persistent sidebars for navigation and agent status.
+    *   **Mobile:** Tab-based interface focusing on the Oracle's Feed and active task tracking.
+*   **The Oracle's Feed:** A prominent top-level summary using "Human-Centric NLP" to explain organizational status.
+*   **The Matrix (Kanban):** A multi-lane board tracking tasks: `Backlog`, `Architect Review`, `In Progress`, `Validation`, `Complete`. (Transitions to vertical list-view on mobile).
+*   **Agent Registry:** A sidebar showing connected clients, their roles, and their "Capability Statements".
 
-### 4.2 Client: The Operator Interface
+### 4.3 Client: The Operator Interface
 *   **Minimalist Dashboard:** Focused on throughput and local environment health.
-*   **Capability Explorer:** A dedicated screen to initiate "System Scans." Displays a Markdown preview of discovered capabilities for user modification and approval.
+*   **Capability Explorer:** A dedicated screen to initiate "System Scans" and approve Markdown-based capability reports.
 *   **The Log Stream:** Realtime terminal-like output showing the agent's internal thought process (Chain-of-Thought).
 *   **Physical Feedback (Sentinel Only):** Visual indicators of connected hardware status.
 
 ---
 
-## 5. Agentic Loop & Autonomous Workflow
+## 5. Agentic Loop & Autonomous Workflows
 
 ### 5.1 The "Prophecy" Loop (File-Centric Workflow)
 All communication and task management in the Matrix are driven by **Markdown Documents with YAML Front Matter**, utilizing an optimized agentic loop inspired by high-performance autonomous systems.
 
-1.  **Intent Reception (The Prophecy):** A human creates a "Request" document in HQ.
-    *   `status: draft`
-    *   `responsible_party: the_oracle`
+1.  **Intent Reception (The Prophecy):** A human creates a "Request" document in HQ (`status: draft`).
 2.  **Oracle Interpretation & Pre-fetching:** 
     *   The Oracle translates the intent and initiates **Background Capability Pre-fetching**. 
     *   It scans for relevant Agent/Sentinel `capability.md` files while the Architect is being alerted.
-    *   `status: interpreted`
-    *   `responsible_party: the_architect`
+    *   `status: interpreted`, `responsible_party: the_architect`.
 3.  **Architect Decomposition:** The Architect analyzes the Request and pre-fetched data to generate granular "Task" documents.
-    *   `status: pending`
-    *   `dependencies: [task_id_1, task_id_2]`
+    *   `status: pending`, `dependencies: [task_id_n]`.
 4.  **Dependency & Token Budgeting:** 
     *   The Architect monitors task dependencies. A task is only marked `ready_for_execution` when all blockers are `completed`.
     *   **Token/Resource Guard:** The Architect tracks cumulative resource usage and may "nudge" or pause Agents if they exceed a workspace budget.
 5.  **Autonomous Execution & Local Orchestration:**
     *   Agents/Sentinels scan for tasks where `status: ready_for_execution`.
-    *   **Local Resume Logic:** If a task was previously interrupted (e.g., token limit reached), the Agent uses the most recent `Progress Logs` to resume mid-thought without re-planning the entire task.
+    *   **Local Resume Logic:** If a task was previously interrupted, the Agent uses the most recent `Progress Logs` to resume mid-thought.
     *   **Reporting:** The Agent updates the HQ Task document with progress logs in the Markdown body and status updates in the YAML.
-6.  **Validation & Quality Assurance:** The Architect reviews the final Task output.
-    *   **Automated Stop Hooks:** Before human review, the Architect may execute automated validation hooks (e.g., `npm test`, hardware checks).
+6.  **Validation & Quality Assurance:** 
+    *   **Automated Stop Hooks:** Before human review, the Architect executes automated validation hooks (e.g., `npm test`, hardware checks).
     *   **Approval:** Marks task `completed`, unblocking dependent tasks.
-    *   **Nudge-based Rejection:** If the output is insufficient, the Architect updates the front matter to `status: revision_needed` and provides a **Refinement Nudge**. Instead of a full restart, the Agent is instructed to focus specifically on the delta identified in the `# Review Feedback`.
-    *   **Re-assignment:** If the Agent is unable to fulfill the task, the Architect resets it to `pending` with updated `capability_requirements`.
+    *   **Nudge-based Rejection:** If output is insufficient, Architect updates status to `revision_needed` and provides a **Refinement Nudge**.
+    *   **Refinement**: The Architect updates the original **Task Description** to include missing requirements, ensuring persistent knowledge for future attempts.
+    *   **Re-assignment:** If the Agent is unable to fulfill the task, the Architect resets it to `pending` with updated requirements.
 7.  **Final Synthesis:** Once all tasks are `completed`, the Oracle synthesizes a final "Human Report."
 
 ### 5.2 Entity Schema Example (Task Markdown - Revision Needed)
@@ -139,12 +135,20 @@ Implement the discovery logic in the Rust core to list all connected Android dev
 The implementation only discovers devices connected via USB. It must also support network-connected devices (ADB over Wi-Fi). I have updated the Task Description to reflect this requirement.
 ```
 
-### 5.3 Capability Discovery & Synthesis
+### 5.3 Capability Discovery Workflow
 1.  **Authorization:** The user grants the Agent Client permission to scan the host system.
-2.  **Autonomous Scan:** The Rust core logic runs a series of diagnostic tools (e.g., `which git`, `lscpu`, `adb devices`, `rustc --version`).
-3.  **Synthesis:** The Agent Client (optionally using an LLM) compiles the raw diagnostic data into a human-readable and Architect-legible Markdown statement.
-4.  **User Review:** The user can edit the synthesized statement in the Client UI (e.g., hiding certain tools or adding manual descriptions).
-5.  **Synchronization:** Upon approval, the statement is pushed to the HQ via the MSP Layer and becomes visible to the Architect for task delegation.
+2.  **Autonomous Scan:** The Rust core logic runs diagnostic tools (e.g., `which git`, `lscpu`, `adb devices`).
+3.  **Synthesis:** The Agent Client compiles raw diagnostic data into a human-readable and Architect-legible Markdown statement.
+4.  **User Review:** The user can edit the synthesized statement in the Client UI.
+5.  **Synchronization:** Upon approval, the statement is pushed to HQ via the MSP Layer.
+
+### 5.4 AI Coding Agent Workflow
+When the Architect delegates a code-related task to an Agent, the client initiates the following specialized loop:
+1.  **Environment Setup:** Using `ContainerService`, the agent creates a dedicated git worktree and initializes an `ExecutionProcess`.
+2.  **Context Retrieval:** The `FileRanker` identifies relevant files to populate the LLM's context window.
+3.  **The Coding Turn:** The Agent executes a series of "turns" using the `StandardCodingAgentExecutor`, streaming real-time diffs back to HQ via `DiffStream`.
+4.  **Verification:** The Agent runs automated tests within its container to verify the fix.
+5.  **Submission:** Upon successful verification, the Agent updates the Task Markdown with its changes and marks it for Architect review.
 
 ---
 
