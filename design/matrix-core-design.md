@@ -243,7 +243,23 @@ All collections are scoped by **Permissions** (User/Team-level access) and conta
 *   **Level 3: Integration (FFI/MSP):** Validates the boundary between Flutter and Rust, and between the Application and Appwrite.
 *   **Level 4: Agentic Evals (LLM):** Uses a set of "Prophecy Benchmarks" to ensure the Oracle and Architect personas remain accurate and reliable.
 
-### 9.2 Specialized Testing
-*   **Hardware Simulation:** Sentinels will be tested using mock ADB and Serial drivers when physical hardware is unavailable.
-*   **Network Resilience:** Simulate high-latency and offline scenarios to test the MSP Layer's local caching and synchronization capabilities.
-*   **Sandboxing Verification:** Periodically attempt to execute "forbidden" commands from within an agent process to verify container/process isolation.
+---
+
+## 10. Development Environment
+
+### 10.1 Appwrite Configuration
+*   **Local Development:** Developers are encouraged to use a local Appwrite instance running in **Docker** for rapid iteration and offline development.
+    *   Command: `docker compose up -d` (using the official Appwrite `docker-compose.yml`).
+*   **Environment Variables:** Sensitive configuration and project keys must be managed via a `.env` file at the root of the HQ and Agent Client projects.
+    *   **`.env` Template:**
+        ```env
+        APPWRITE_ENDPOINT=http://localhost/v1 # or cloud endpoint
+        APPWRITE_PROJECT_ID=matrix_dev
+        APPWRITE_API_KEY=your_dev_key_here
+        ```
+*   **Security Note:** The `.env` file is strictly for local development and must never be committed to source control. A `.env.example` should be provided as a reference.
+
+### 10.2 Tooling
+*   **Flutter:** Stable channel, latest version.
+*   **Rust:** `rustup` with the latest stable toolchain.
+*   **FFI:** `flutter_rust_bridge` codegen must be run after any changes to the Rust core logic.
