@@ -44,19 +44,20 @@ The reference implementation uses **Appwrite** as the service provider.
 
 ### 3.2 The Agent Client
 *   **Frontend/Controller:** **Flutter (Desktop/Android/iOS)**.
-*   **Authentication & Connection:**
-    *   **User Sign-In:** The agent client uses the `IAuthProvider` to sign in.
-    *   **Workspace Selection:** Upon sign-in, the user selects the workspace the agent should join via the MSP.
-    *   **Secure Session:** The MSP manages the secure, persistent session.
-*   **Core Logic:** **Rust** (integrated via `flutter_rust_bridge`). Handles high-performance tasks utilizing optimized libraries:
-    *   **Git Worktree Management:** Powered by `vibe-kanban/worktree-manager`, enabling agents to work on isolated feature branches without polluting the main workspace.
-    *   **Task Execution:** Powered by `vibe-kanban/executors`, providing a unified interface for running shell commands, managing environment variables, and capturing execution logs.
-    *   **Local Orchestration:** Planning sub-tasks, managing local state, and executing tool calls (shell, file system, hardware).
-    *   **LLM Interface:** Integration with remote APIs (OpenAI, Anthropic, Gemini) or **optional** local LLM orchestration (via `llama-cpp` or `candle`) for offline/private tasks.
-    *   **System Exploration:** Autonomous discovery of local tools (git, compilers, ADB), hardware (USB devices, GPUs), and system resources (RAM, CPU) to generate capability reports.
-    *   **File System & Process Management:** Securely managing the local workspace and build processes.
-    *   **Hardware Interfacing:** For Sentinels (USB/Serial/Bluetooth/ADB).
-*   **Networking:** The client communicates via the **MSP Layer**, utilizing the active implementation (e.g., Appwrite Dart/Rust SDKs).
+*   **Core Logic:** **Rust** (integrated via `flutter_rust_bridge`). Handles high-performance tasks utilizing optimized libraries from `vibe-kanban`:
+    *   **Agentic Coding Framework:** Utilizes `vibe-kanban/services/container.rs` and `StandardCodingAgentExecutor` to manage complex coding turns, including planning and self-correction.
+    *   **Model Context Protocol (MCP):** Implements an MCP Task Server to provide LLMs (like Gemini) with standardized tools for repository access, workspace management, and task attempts.
+    *   **Codebase Intelligence:** Leverages `vibe-kanban/file_ranker` for RAG-based file discovery and `DiffStream` for real-time code change visualization in the HQ.
+    *   **Git Worktree Management:** Powered by `vibe-kanban/worktree-manager`, enabling isolated feature development.
+    *   **Task Execution:** Powered by `vibe-kanban/executors`, providing a unified interface for shell and tool calls.
+...
+### 5.4 AI Coding Agent Workflow
+When the Architect delegates a code-related task to an Agent, the client initiates the following specialized loop:
+1.  **Environment Setup:** Using `ContainerService`, the agent creates a dedicated git worktree and initializes an `ExecutionProcess`.
+2.  **Context Retrieval:** The `FileRanker` identifies relevant files to populate the LLM's context window.
+3.  **The Coding Turn:** The Agent executes a series of "turns" using the `StandardCodingAgentExecutor`, streaming real-time diffs back to the HQ via `DiffStream`.
+4.  **Verification:** The Agent runs automated tests within its container to verify the fix.
+5.  **Submission:** Upon successful verification, the Agent updates the Task Markdown with its changes and marks it for Architect review.
 
 ---
 
