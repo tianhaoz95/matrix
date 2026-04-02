@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AI Configuration - Yukika</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "inverse-on-surface": "#9a9d9f",
+              "on-surface": "#2c2f31",
+              "on-primary": "#eef3ff",
+              "primary-container": "#54a3ff",
+              "on-tertiary": "#e0f7fa",
+              "surface-container": "#e5e9eb",
+              "inverse-surface": "#0b0f10",
+              "surface-container-high": "#dfe3e6",
+              "tertiary-fixed-dim": "#d0e7ea",
+              "on-secondary-container": "#304092",
+              "primary": "#005da6",
+              "on-primary-container": "#002345",
+              "tertiary-fixed": "#def5f8",
+              "tertiary": "#4a5f62",
+              "on-error": "#ffefee",
+              "surface-bright": "#f5f7f9",
+              "on-background": "#2c2f31",
+              "surface-dim": "#d0d5d8",
+              "on-tertiary-fixed": "#374b4e",
+              "on-primary-fixed-variant": "#002d55",
+              "surface-variant": "#d9dde0",
+              "surface-container-low": "#eef1f3",
+              "primary-fixed-dim": "#2695ff",
+              "outline-variant": "#abadaf",
+              "surface-tint": "#005da6",
+              "on-surface-variant": "#595c5e",
+              "secondary-dim": "#39489b",
+              "error-dim": "#9f0519",
+              "tertiary-dim": "#3e5356",
+              "on-tertiary-container": "#495e60",
+              "on-tertiary-fixed-variant": "#53686b",
+              "on-primary-fixed": "#000000",
+              "primary-dim": "#005192",
+              "primary-fixed": "#54a3ff",
+              "secondary-fixed": "#c9cfff",
+              "error": "#b31b25",
+              "secondary-container": "#c9cfff",
+              "error-container": "#fb5151",
+              "surface-container-lowest": "#ffffff",
+              "on-secondary": "#f2f1ff",
+              "on-secondary-fixed-variant": "#3a499c",
+              "tertiary-container": "#def5f8",
+              "secondary": "#4555a8",
+              "surface": "#f5f7f9",
+              "inverse-primary": "#1393ff",
+              "on-error-container": "#570008",
+              "on-secondary-fixed": "#1a2b7e",
+              "surface-container-highest": "#d9dde0",
+              "secondary-fixed-dim": "#b7c0ff",
+              "outline": "#747779",
+              "background": "#f5f7f9"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Be Vietnam Pro"],
+              "label": ["Be Vietnam Pro"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        h1, h2, h3 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .snow-glow {
+            box-shadow: 0px 20px 40px rgba(44, 47, 49, 0.06);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen pb-12">
+<!-- TopAppBar Section -->
+<header class="flex items-center w-full px-6 py-4 h-20 sticky top-0 z-50 bg-[#f5f7f9] dark:bg-slate-900">
+<div class="flex items-center gap-4 w-full">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/50 transition-colors duration-300 active:scale-95 transition-transform duration-200 text-[#0091FF]" style="">
+<span class="material-symbols-outlined" data-icon="arrow_back" style="">arrow_back</span>
+</button>
+<h1 class="font-['Plus_Jakarta_Sans'] font-bold text-2xl tracking-tight text-on-surface" style="">Program Config</h1>
+</div>
+</header>
+<main class="max-w-md mx-auto px-6 mt-4 space-y-8">
+<!-- Persona Selector Section -->
+<section class="space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-secondary" data-icon="psychology" style="">psychology</span>
+<h2 class="text-xl font-bold tracking-tight" style="">Persona Selector</h2>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<!-- Selected Persona -->
+<button class="flex flex-col items-center p-5 bg-surface-container-lowest rounded-xl border-2 border-primary ring-4 ring-primary/10 transition-all duration-300" style="">
+<div class="w-12 h-12 bg-primary-container/20 text-primary rounded-full flex items-center justify-center mb-3">
+<span class="material-symbols-outlined" data-icon="architecture" data-weight="fill" style='font-variation-settings: "FILL" 1;'>architecture</span>
+</div>
+<span class="text-sm font-bold text-primary" style="">The Architect</span>
+</button>
+<!-- Persona Option -->
+<button class="flex flex-col items-center p-5 bg-surface-container-lowest rounded-xl hover:bg-surface-bright transition-all duration-300 group" style="">
+<div class="w-12 h-12 bg-surface-container text-on-surface-variant rounded-full flex items-center justify-center mb-3 group-hover:bg-tertiary-container group-hover:text-tertiary">
+<span class="material-symbols-outlined" data-icon="auto_awesome" style="">auto_awesome</span>
+</div>
+<span class="text-sm font-medium text-on-surface-variant group-hover:text-on-surface" style="">The Oracle</span>
+</button>
+<!-- Persona Option -->
+<button class="flex flex-col items-center p-5 bg-surface-container-lowest rounded-xl hover:bg-surface-bright transition-all duration-300 group" style="">
+<div class="w-12 h-12 bg-surface-container text-on-surface-variant rounded-full flex items-center justify-center mb-3 group-hover:bg-tertiary-container group-hover:text-tertiary">
+<span class="material-symbols-outlined" data-icon="smart_toy" style="">smart_toy</span>
+</div>
+<span class="text-sm font-medium text-on-surface-variant group-hover:text-on-surface" style="">Agent</span>
+</button>
+<!-- Persona Option -->
+<button class="flex flex-col items-center p-5 bg-surface-container-lowest rounded-xl hover:bg-surface-bright transition-all duration-300 group" style="">
+<div class="w-12 h-12 bg-surface-container text-on-surface-variant rounded-full flex items-center justify-center mb-3 group-hover:bg-tertiary-container group-hover:text-tertiary">
+<span class="material-symbols-outlined" data-icon="shield" style="">shield</span>
+</div>
+<span class="text-sm font-medium text-on-surface-variant group-hover:text-on-surface" style="">Sentinel</span>
+</button>
+</div>
+</section>
+<!-- Heartbeat Toggle Section -->
+<section class="bg-surface-container-low rounded-xl p-6 space-y-4">
+<div class="flex items-center justify-between">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error" data-icon="favorite" data-weight="fill" style='font-variation-settings: "FILL" 1;'>favorite</span>
+<h2 class="text-lg font-bold" style="">Heartbeat</h2>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed" style="">Keeps the AI connection warm for instant responses during heavy drift periods.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer" style="">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-14 h-8 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</section>
+<!-- Model Selection Section -->
+<section class="space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-secondary" data-icon="dns" style="">dns</span>
+<h2 class="text-xl font-bold tracking-tight" style="">Model Selection</h2>
+</div>
+<div class="space-y-3">
+<!-- Radio Option 1 -->
+<label class="flex items-center justify-between p-5 bg-surface-container-lowest rounded-xl cursor-pointer snow-glow group transition-all" style="">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="cloud_done" style="">cloud_done</span>
+</div>
+<span class="font-semibold text-on-surface" style="">OpenAI API</span>
+</div>
+<input checked="" class="w-6 h-6 text-primary bg-surface-container-high border-none focus:ring-primary focus:ring-offset-0 rounded-full" name="model" type="radio"/>
+</label>
+<!-- Radio Option 2 -->
+<label class="flex items-center justify-between p-5 bg-surface-container-lowest rounded-xl cursor-pointer hover:bg-surface-bright transition-all" style="">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="home_storage" style="">home_storage</span>
+</div>
+<span class="font-semibold text-on-surface" style="">Local Model</span>
+</div>
+<input class="w-6 h-6 text-primary bg-surface-container-high border-none focus:ring-primary focus:ring-offset-0 rounded-full" name="model" type="radio"/>
+</label>
+<!-- Radio Option 3 -->
+<label class="flex items-center justify-between p-5 bg-surface-container-lowest rounded-xl cursor-pointer hover:bg-surface-bright transition-all" style="">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="foggy" style="">foggy</span>
+</div>
+<span class="font-semibold text-on-surface" style="">Cloud Model</span>
+</div>
+<input class="w-6 h-6 text-primary bg-surface-container-high border-none focus:ring-primary focus:ring-offset-0 rounded-full" name="model" type="radio"/>
+</label>
+</div>
+</section>
+<!-- Decorative Drift Element -->
+</main>
+<!-- Floating Action Feedback (Optional/Contextual) -->
+</body></html>
