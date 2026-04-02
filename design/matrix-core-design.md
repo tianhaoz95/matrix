@@ -165,9 +165,85 @@ All collections are scoped by **Permissions** (User/Team-level access) and conta
 *   **`messages`**: `id`, `workspace_id`, `sender_id`, `content`, `timestamp`, `thread_id`.
 *   **`logs`**: `id`, `workspace_id`, `agent_id`, `content`, `timestamp`.
 
+## 8. Implementation Roadmap & Testing Plan
+
+### Phase 1: Foundation & MSP Layer
+*   [ ] **MSP Core Interfaces:** Define `IAuthProvider`, `IDataProvider`, and `IStorageProvider` in both Dart and Rust.
+    *   **Test:** Unit tests for interface definitions and mock implementations ensuring type safety across the FFI boundary.
+*   [ ] **Appwrite Reference Implementation:**
+    *   [ ] Setup Appwrite Project and Collections (Agents, Tasks, Messages, Logs).
+        *   **Test:** Schema validation tests using Appwrite SDK to ensure collections match the Data Model.
+    *   [ ] Implement `AppwriteAuthProvider` with Team-based workspaces.
+        *   **Test:** Integration tests for signup, login, and workspace creation/switching.
+    *   [ ] Implement `AppwriteDataProvider` with Realtime subscription support.
+        *   **Test:** End-to-end Realtime tests: push a task update to Appwrite and verify the subscriber receives the event within <200ms.
+
+### Phase 2: HQ Development (The Command Center)
+*   [ ] **HQ Frontend Scaffolding:** Initialize Flutter project for Web/Desktop/Mobile.
+    *   **Test:** Build smoke tests for all target platforms (Web, iOS, Android, macOS, Windows).
+*   [ ] **Authentication Flows:** Implement "The Construct" (Login/Signup) and Workspace Selector using `design/ui/v1/app/hq/sign_in/`.
+    *   **Test:** Widget/Golden tests for UI components; integration tests for the full auth-to-dashboard flow.
+*   [ ] **The Matrix (Kanban):** Build the task board with multi-lane support and vertical list-view for mobile.
+    *   **Test:** Drag-and-drop widget tests; responsive layout tests ensuring no overflow on small screens.
+*   [ ] **The Oracle's Feed:** Implement the real-time activity summary component.
+    *   **Test:** Stream-based unit tests; verify feed updates automatically on database events.
+*   [ ] **Agent Registry:** Build the sidebar to display connected agents and their capability statements.
+    *   **Test:** Verify agent online/offline status toggles correctly in the UI.
+
+### Phase 3: Agent Client Core (The Sentinel/Agent Logic)
+*   [ ] **Rust Core & FFI:** Setup `flutter_rust_bridge` and integrate `vibe-kanban` submodules.
+    *   **Test:** FFI bridge integration tests; verify Rust functions are callable from Dart with complex types.
+*   [ ] **Worktree & Execution:** 
+    *   [ ] Implement `WorktreeManager` for isolated task environments.
+        *   **Test:** Unit tests for git worktree creation, isolation (file collision checks), and cleanup.
+    *   [ ] Implement `CommandExecutor` for robust shell/tool execution.
+        *   **Test:** Execute safe vs. unsafe commands; verify stdout/stderr capture and exit code handling.
+*   [ ] **Capability Exploration:** Build the autonomous system scanner and Markdown synthesis engine.
+    *   **Test:** Mock system environment tests; verify scanner correctly identifies tools (git, rustc) and hardware.
+*   [ ] **Local Orchestration:** Implement the internal sub-task planner and resume logic.
+    *   **Test:** State persistence tests; simulate a process crash and verify the agent resumes from the last log entry.
+
+### Phase 4: Agent Client UI & Integration
+*   [ ] **Client Frontend:** Build the minimalist operator dashboard using `design/ui/v1/app/agent/`.
+    *   **Test:** Golden tests for the dashboard and capability explorer screens.
+*   [ ] **The Log Stream:** Implement the real-time terminal output for Chain-of-Thought visualization.
+    *   **Test:** Stress test with high-frequency log updates (>100 lines/sec) to ensure UI performance.
+*   [ ] **HQ Synchronization:** Ensure real-time task pulling and progress reporting via the MSP Layer.
+    *   **Test:** Round-trip integration test: HQ creates task -> Client pulls -> Client updates -> HQ displays update.
+
+### Phase 5: Advanced AI & Agentic Workflows
+*   [ ] **The Oracle & Architect Personas:**
+    *   [ ] Implement LLM-based task interpretation and decomposition logic in HQ.
+        *   **Test:** Prompt regression tests (evals); verify the Architect correctly breaks down 5 standard requests into valid sub-tasks.
+    *   [ ] Build the Architect's "Validation & Nudge" loop with refined task descriptions.
+        *   **Test:** Rejection flow test: simulate a failed task and verify the Architect appends feedback and updates the description.
+*   [ ] **AI Coding Agent:** 
+    *   [ ] Integrate `vibe-kanban/file_ranker` for RAG-based context retrieval.
+        *   **Test:** RAG accuracy tests; verify the ranker returns the most relevant files for a given bug description.
+    *   [ ] Implement the MCP Task Server for standardized tool access.
+        *   **Test:** MCP protocol compliance tests; verify the model can successfully list and read files via MCP tools.
+    *   [ ] Setup `DiffStream` for real-time code change visualization in HQ.
+        *   **Test:** Verify diffs are correctly patched and rendered in the HQ UI in real-time.
+
+### Phase 6: Physical World (Sentinel Integration)
+*   [ ] **Hardware Drivers:** Implement USB/ADB/Serial interfacing in the Rust core.
+    *   **Test:** Integration tests with physical/emulated hardware; verify serial data read/write integrity.
+*   [ ] **Sentinel Dashboard:** Add physical status indicators to the Client UI.
+    *   **Test:** Hardware disconnect simulation; verify UI reflects "Offline" status immediately.
+*   [ ] **Remote Monitoring:** Enable real-time video/status streaming for physical tasks.
+    *   **Test:** WebRTC/Stream latency tests; target <500ms for remote visual feedback.
+
 ---
 
-## 7. Security & Ethics
-*   **Sandboxing:** Agents execute code in local Docker containers or isolated environments managed by the Rust core.
-*   **Human-in-the-Loop:** The Oracle can pause the entire organization if it detects "Anomalies" or safety violations.
-*   **Audit Trails:** Every action taken by an AI agent is immutable and logged in Appwrite.
+## 9. Testing Strategy
+
+### 9.1 Multi-Layered Validation
+*   **Level 1: Unit & Logic (Rust/Dart):** Focused on individual functions, MSP implementations, and state management.
+*   **Level 2: Visual & UX (Golden Tests):** Ensures the Brutalist-Refined aesthetic remains consistent across platforms and screen sizes.
+*   **Level 3: Integration (FFI/MSP):** Validates the boundary between Flutter and Rust, and between the Application and Appwrite.
+*   **Level 4: Agentic Evals (LLM):** Uses a set of "Prophecy Benchmarks" to ensure the Oracle and Architect personas remain accurate and reliable.
+
+### 9.2 Specialized Testing
+*   **Hardware Simulation:** Sentinels will be tested using mock ADB and Serial drivers when physical hardware is unavailable.
+*   **Network Resilience:** Simulate high-latency and offline scenarios to test the MSP Layer's local caching and synchronization capabilities.
+*   **Sandboxing Verification:** Periodically attempt to execute "forbidden" commands from within an agent process to verify container/process isolation.
