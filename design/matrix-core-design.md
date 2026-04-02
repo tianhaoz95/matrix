@@ -12,6 +12,7 @@ The system is designed for **asynchronous autonomy**: humans provide high-level 
 ### 2.1 Component Overview
 *   **The HQ (Headquarters):** The central nervous system. A persistent backend and management dashboard.
 *   **The Agent Clients:** Distributed compute nodes running specialized AI personas. Each client is a self-contained unit capable of local orchestration.
+*   **The Matrix Service Provider (MSP) Layer:** A provider-agnostic abstraction layer that sits between the application logic and the backend infrastructure. This allows the system to switch between vendors (Appwrite, Firebase, Supabase) or internal enterprise stacks with minimal code changes.
 
 ### 2.2 Roles & Personas
 | Role | Count | Responsibility |
@@ -23,29 +24,39 @@ The system is designed for **asynchronous autonomy**: humans provide high-level 
 
 ---
 
-## 3. Tech Stack
+## 3. Tech Stack & Abstraction Layer
 
-### 3.1 The HQ (Headquarters)
-*   **Frontend:** **Flutter (Web/Desktop/Mobile)**. Target platforms: Web, macOS, Windows, Linux, iOS, and Android.
-*   **Backend-as-a-Service:** **Appwrite**.
-    *   **Auth:** Multi-tenant authentication. Users can sign up and sign in.
-    *   **Workspaces:** Modeled using Appwrite **Teams**. Each user can create or join multiple workspaces.
-    *   **Database:** Task management, agent registry, and audit logs, all scoped to specific `workspace_id`s.
-    *   **Realtime:** WebSocket-based synchronization for task updates and agent status within the active workspace.
-    *   **Storage:** Hosting build artifacts and logs, partitioned by workspace.
+### 3.0 The MSP Abstraction Layer
+The Matrix utilizes a dependency injection pattern to interact with backend services. Core interfaces (Providers) are defined in both Flutter (Dart) and Rust:
+
+*   **`IAuthProvider`**: Handles signup, login, session persistence, and workspace (team) management.
+*   **`IDataProvider`**: Handles CRUD operations and Realtime event subscriptions for all collections (Tasks, Agents, Logs).
+*   **`IStorageProvider`**: Handles file uploads (artifacts, logs) and retrieval.
+
+### 3.1 Primary Implementation: Appwrite
+The reference implementation uses **Appwrite** as the service provider.
+*   **Frontend:** **Flutter (Web/Desktop/Mobile)**.
+*   **Backend-as-a-Service:**
+    *   **Auth:** Implements `IAuthProvider` using Appwrite Auth and Teams.
+    *   **Database:** Implements `IDataProvider` using Appwrite Databases.
+    *   **Realtime:** Uses Appwrite Realtime for WebSocket synchronization.
+    *   **Storage:** Implements `IStorageProvider` using Appwrite Buckets.
 
 ### 3.2 The Agent Client
 *   **Frontend/Controller:** **Flutter (Desktop/Android/iOS)**.
 *   **Authentication & Connection:**
-    *   **User Sign-In:** The agent client requires the user to sign in using the same credentials as the HQ.
-    *   **Workspace Selection:** Upon sign-in, the user selects the workspace the agent should join.
-    *   **Secure Session:** Uses Appwrite's session management to maintain a persistent, secure connection to the HQ.
-*   **Core Logic:** **Rust** (integrated via `flutter_rust_bridge`). Handles high-performance tasks:
+    *   **User Sign-In:** The agent client uses the `IAuthProvider` to sign in.
+    *   **Workspace Selection:** Upon sign-in, the user selects the workspace the agent should join via the MSP.
+    *   **Secure Session:** The MSP manages the secure, persistent session.
+*   **Core Logic:** **Rust** (integrated via `flutter_rust_bridge`). Handles high-performance tasks utilizing optimized libraries:
+    *   **Git Worktree Management:** Powered by `vibe-kanban/worktree-manager`, enabling agents to work on isolated feature branches without polluting the main workspace.
+    *   **Task Execution:** Powered by `vibe-kanban/executors`, providing a unified interface for running shell commands, managing environment variables, and capturing execution logs.
     *   **Local Orchestration:** Planning sub-tasks, managing local state, and executing tool calls (shell, file system, hardware).
     *   **LLM Interface:** Integration with remote APIs (OpenAI, Anthropic, Gemini) or **optional** local LLM orchestration (via `llama-cpp` or `candle`) for offline/private tasks.
+    *   **System Exploration:** Autonomous discovery of local tools (git, compilers, ADB), hardware (USB devices, GPUs), and system resources (RAM, CPU) to generate capability reports.
     *   **File System & Process Management:** Securely managing the local workspace and build processes.
     *   **Hardware Interfacing:** For Sentinels (USB/Serial/Bluetooth/ADB).
-*   **Networking:** Appwrite Dart/Rust SDKs for realtime sync with HQ.
+*   **Networking:** The client communicates via the **MSP Layer**, utilizing the active implementation (e.g., Appwrite Dart/Rust SDKs).
 
 ---
 
@@ -66,6 +77,7 @@ The system is designed for **asynchronous autonomy**: humans provide high-level 
 
 ### 4.2 Client: The Operator Interface
 *   **Minimalist Dashboard:** Focused on throughput and local environment health.
+*   **Capability Explorer:** A dedicated screen to initiate "System Scans." Displays a Markdown preview of discovered capabilities for user modification and approval.
 *   **The Log Stream:** Realtime terminal-like output showing the agent's internal thought process (Chain-of-Thought).
 *   **Physical Feedback (Sentinel Only):** Visual indicators of connected hardware status.
 
@@ -73,24 +85,65 @@ The system is designed for **asynchronous autonomy**: humans provide high-level 
 
 ## 5. Agentic Loop & Autonomous Workflow
 
-### 5.1 The "Prophecy" Loop (Workflow)
-1.  **Intent Reception:** A human provides a high-level goal in HQ.
-2.  **Oracle Interpretation:** The Oracle translates the goal into a structured "Project Brief" and alerts the Architect.
-3.  **Architect Decomposition:** The Architect breaks the Brief into granular `tasks` in the Appwrite Database.
-4.  **Capability Matching:** The Architect scans the `Capability Statements` of connected Agents/Sentinels.
-5.  **Task Assignment:** Tasks are tagged with specific agent IDs or role requirements.
-6.  **Autonomous Execution & Orchestration:**
-    *   Agents/Sentinels pull tasks via Appwrite Realtime.
-    *   **Local Decomposition:** The Agent Client's core logic (Rust) analyzes the assigned task and creates a local plan (sub-tasks).
-    *   **Execution:** The Agent works through sub-tasks (coding, testing, physical manipulation), orchestrating its local environment.
-    *   **Reporting:** It updates the task in HQ with granular progress reports, logs, and artifacts.
-7.  **Quality Assurance:** The Architect reviews completed tasks. If failed, it re-assigns with feedback.
-8.  **Final Summary:** Once the goal is reached, the Oracle generates a "Human Report" for the supervisor.
+### 5.1 The "Prophecy" Loop (File-Centric Workflow)
+All communication and task management in the Matrix are driven by **Markdown Documents with YAML Front Matter**, utilizing an optimized agentic loop inspired by high-performance autonomous systems.
 
-### 5.2 Capability Statements
-Every agent client publishes a `capability.md` to HQ. 
-*   **Example (Sentinel):** "I have access to a Pixel 8 Pro via ADB. I can install APKs and run UI tests."
-*   **Example (Agent):** "I am specialized in Rust development and SQLite optimization. I have 32GB RAM for local builds."
+1.  **Intent Reception (The Prophecy):** A human creates a "Request" document in HQ.
+    *   `status: draft`
+    *   `responsible_party: the_oracle`
+2.  **Oracle Interpretation & Pre-fetching:** 
+    *   The Oracle translates the intent and initiates **Background Capability Pre-fetching**. 
+    *   It scans for relevant Agent/Sentinel `capability.md` files while the Architect is being alerted.
+    *   `status: interpreted`
+    *   `responsible_party: the_architect`
+3.  **Architect Decomposition:** The Architect analyzes the Request and pre-fetched data to generate granular "Task" documents.
+    *   `status: pending`
+    *   `dependencies: [task_id_1, task_id_2]`
+4.  **Dependency & Token Budgeting:** 
+    *   The Architect monitors task dependencies. A task is only marked `ready_for_execution` when all blockers are `completed`.
+    *   **Token/Resource Guard:** The Architect tracks cumulative resource usage and may "nudge" or pause Agents if they exceed a workspace budget.
+5.  **Autonomous Execution & Local Orchestration:**
+    *   Agents/Sentinels scan for tasks where `status: ready_for_execution`.
+    *   **Local Resume Logic:** If a task was previously interrupted (e.g., token limit reached), the Agent uses the most recent `Progress Logs` to resume mid-thought without re-planning the entire task.
+    *   **Reporting:** The Agent updates the HQ Task document with progress logs in the Markdown body and status updates in the YAML.
+6.  **Validation & Quality Assurance:** The Architect reviews the final Task output.
+    *   **Automated Stop Hooks:** Before human review, the Architect may execute automated validation hooks (e.g., `npm test`, hardware checks).
+    *   **Approval:** Marks task `completed`, unblocking dependent tasks.
+    *   **Nudge-based Rejection:** If the output is insufficient, the Architect updates the front matter to `status: revision_needed` and provides a **Refinement Nudge**. Instead of a full restart, the Agent is instructed to focus specifically on the delta identified in the `# Review Feedback`.
+    *   **Re-assignment:** If the Agent is unable to fulfill the task, the Architect resets it to `pending` with updated `capability_requirements`.
+7.  **Final Synthesis:** Once all tasks are `completed`, the Oracle synthesizes a final "Human Report."
+
+### 5.2 Entity Schema Example (Task Markdown - Revision Needed)
+```markdown
+---
+id: task_082
+parent_id: request_441
+title: "Implement Rust-based ADB Discovery"
+status: revision_needed
+responsible_party: sentinel
+dependencies: [task_081]
+priority: high
+capability_requirements: [adb_access, rust_toolchain]
+created_at: 2026-04-02T10:00:00Z
+---
+
+# Task Description (Updated by Architect)
+Implement the discovery logic in the Rust core to list all connected Android devices via ADB. **Must support both USB and network-connected (Wi-Fi) devices.**
+
+## Progress Logs
+- [2026-04-02 10:15] Agent_Sentinel_01: Starting scan...
+- [2026-04-02 10:45] Agent_Sentinel_01: Finished. Submitted for review.
+
+# Review Feedback (The Architect)
+The implementation only discovers devices connected via USB. It must also support network-connected devices (ADB over Wi-Fi). I have updated the Task Description to reflect this requirement.
+```
+
+### 5.3 Capability Discovery & Synthesis
+1.  **Authorization:** The user grants the Agent Client permission to scan the host system.
+2.  **Autonomous Scan:** The Rust core logic runs a series of diagnostic tools (e.g., `which git`, `lscpu`, `adb devices`, `rustc --version`).
+3.  **Synthesis:** The Agent Client (optionally using an LLM) compiles the raw diagnostic data into a human-readable and Architect-legible Markdown statement.
+4.  **User Review:** The user can edit the synthesized statement in the Client UI (e.g., hiding certain tools or adding manual descriptions).
+5.  **Synchronization:** Upon approval, the statement is pushed to the HQ via the MSP Layer and becomes visible to the Architect for task delegation.
 
 ---
 
