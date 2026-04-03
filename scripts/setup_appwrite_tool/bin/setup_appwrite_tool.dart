@@ -1,39 +1,48 @@
 import 'dart:convert';
 import 'package:dart_appwrite/dart_appwrite.dart';
 import 'package:http/http.dart' as http;
+import 'package:dotenv/dotenv.dart';
+import 'dart:io';
 
 Future<void> main() async {
-  const projectId = 'matrix_dev';
+  final env = DotEnv()..load(['../../.env']);
+  
+  final projectId = env['APPWRITE_PROJECT_ID'] ?? 'matrix_dev';
+  final projectName = env['APPWRITE_PROJECT_NAME'] ?? 'Matrix Organization';
+  final apiKey = env['APPWRITE_LOCAL_API_KEY'] ?? 'standard_a84dcce7e8ab43315ff21487e0da61819601488d6cbb6478a6e36c91374bd9ef732e10dcbbfa9963f27b504e8c49c711a43095dcd1d216d128120a52f9e8303c1eab5cd661882f251dfe27e177d4840cb11193d3d837eb14a643250fae2eaf0f115abe0a6e90789dbb38441ac8fce576d59591b676ed7457afbc0b3558c1cd1f';
+  final endpoint = env['APPWRITE_ENDPOINT'] ?? 'http://localhost/v1';
+  
   const dbId = 'main';
-  const apiKey = 'standard_a84dcce7e8ab43315ff21487e0da61819601488d6cbb6478a6e36c91374bd9ef732e10dcbbfa9963f27b504e8c49c711a43095dcd1d216d128120a52f9e8303c1eab5cd661882f251dfe27e177d4840cb11193d3d837eb14a643250fae2eaf0f115abe0a6e90789dbb38441ac8fce576d59591b676ed7457afbc0b3558c1cd1f';
-  const endpoint = 'http://localhost/v1';
 
   print('--- Matrix Appwrite Deep Setup ---');
+  print('Target Project ID: $projectId');
 
-  // 1. Create Project via REST API (Console API)
-  try {
-    print('Attempting to create project "$projectId" via REST...');
-    final response = await http.post(
-      Uri.parse('$endpoint/projects'),
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Appwrite-Project': 'console',
-        'X-Appwrite-Key': apiKey,
-      },
-      body: jsonEncode({
-        'projectId': projectId,
-        'name': 'Matrix Organization',
-        'teamId': 'matrix_team', // Optional, usually defaults
-      }),
-    );
+  // 1. Create Platforms (Allowing Android apps to connect)
+  final platforms = [
+    {'type': 'android', 'name': 'HQ Android', 'key': 'com.example.hq'},
+    {'type': 'android', 'name': 'Agent Android', 'key': 'com.example.agent'},
+  ];
 
-    if (response.statusCode == 201 || response.statusCode == 200) {
-      print('Project created successfully.');
-    } else {
-      print('Project creation status: ${response.statusCode} - ${response.body}');
+  for (final platform in platforms) {
+    try {
+      print('Creating platform: ${platform['name']}...');
+      final response = await http.post(
+        Uri.parse('$endpoint/projects/$projectId/platforms'),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Appwrite-Project': 'console',
+          'X-Appwrite-Key': apiKey,
+        },
+        body: jsonEncode({
+          'type': platform['type'],
+          'name': platform['name'],
+          'key': platform['key'],
+        }),
+      );
+      print('Platform creation status: ${response.statusCode}');
+    } catch (e) {
+      print('Error creating platform: $e');
     }
-  } catch (e) {
-    print('Error creating project: $e');
   }
 
   // Now use standard SDK for the rest

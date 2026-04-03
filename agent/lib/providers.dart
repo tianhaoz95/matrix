@@ -1,15 +1,30 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/appwrite.dart' as client_sdk;
+import 'package:dart_appwrite/dart_appwrite.dart' as server_sdk;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:msp/msp.dart';
 import 'package:msp/appwrite.dart';
 
-final appwriteClientProvider = Provider<Client>((ref) {
-  final client = Client();
+final appwriteClientProvider = Provider<client_sdk.Client>((ref) {
+  final client = client_sdk.Client();
   client
       .setEndpoint(dotenv.env['APPWRITE_ENDPOINT'] ?? 'http://localhost/v1')
       .setProject(dotenv.env['APPWRITE_PROJECT_ID'] ?? 'matrix_dev')
       .setSelfSigned(status: true); // For local dev
+  return client;
+});
+
+// Provider for server-side operations if local API key is provided
+final appwriteServerClientProvider = Provider<server_sdk.Client?>((ref) {
+  final apiKey = dotenv.env['APPWRITE_LOCAL_API_KEY'];
+  if (apiKey == null || apiKey.isEmpty) return null;
+
+  final client = server_sdk.Client();
+  client
+      .setEndpoint(dotenv.env['APPWRITE_ENDPOINT'] ?? 'http://localhost/v1')
+      .setProject(dotenv.env['APPWRITE_PROJECT_ID'] ?? 'matrix_dev')
+      .setKey(apiKey)
+      .setSelfSigned(status: true);
   return client;
 });
 

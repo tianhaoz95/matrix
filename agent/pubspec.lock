@@ -138,7 +138,7 @@ packages:
     source: hosted
     version: "1.0.9"
   dart_appwrite:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: dart_appwrite
       sha256: "6b5f486ff0d68424c2f74766ab9410a390dbbd20e16aaa033f1eafc564931185"

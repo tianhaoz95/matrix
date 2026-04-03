@@ -37,4 +37,14 @@ else
     echo "Console: http://localhost"
     echo "Endpoint: http://localhost/v1"
     echo "--------------------------------------------------------"
+    
+    # Enable Android access to local Appwrite
+    if command -v adb >/dev/null 2>&1; then
+        echo "Detected adb. Mapping ports for device HA1EY3WF (using 8080->80 mapping)..."
+        # Map Android port 8080 to Host port 80 (Appwrite HTTP)
+        adb -s HA1EY3WF reverse tcp:8080 tcp:80
+        # Map Android port 8443 to Host port 443 (Appwrite HTTPS)
+        adb -s HA1EY3WF reverse tcp:8443 tcp:443
+        echo "ADB mapping complete for HA1EY3WF."
+    fi
 fi

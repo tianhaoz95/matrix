@@ -20,6 +20,7 @@ dependencies:
   flutter_rust_bridge: 2.11.1
   rust:
     path: rust
+  dart_appwrite: ^22.0.0
 
 dev_dependencies:
   flutter_test:
