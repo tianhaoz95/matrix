@@ -1,0 +1,26 @@
+[package]
+name = "rust_lib_rust"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+flutter_rust_bridge = "=2.11.1"
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+thiserror = "2.0"
+async-trait = "0.1"
+tracing = "0.1"
+
+# Vibe Kanban Crates
+executors = { path = "../../../third_party/vibe-kanban/crates/executors" }
+worktree-manager = { path = "../../../third_party/vibe-kanban/crates/worktree-manager" }
+workspace_utils = { path = "../../../third_party/vibe-kanban/crates/utils", package = "utils" }
+git = { path = "../../../third_party/vibe-kanban/crates/git" }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
