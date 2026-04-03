@@ -278,101 +278,167 @@ class _MatrixKanban extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksValue = ref.watch(tasksStreamProvider);
-    final columns = ['To Do', 'Ready', 'WIP', 'Review', 'Done'];
+    final columns = [
+      'Backlog',
+      'Architect Review',
+      'In Progress',
+      'Validation',
+      'Complete'
+    ];
+
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return tasksValue.when(
-      data: (tasks) => ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        itemCount: columns.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 24),
-        itemBuilder: (context, index) {
-          final column = columns[index];
-          final columnTasks = tasks.where((t) => t.status == column).toList();
-          return _KanbanColumn(title: column, tasks: columnTasks);
-        },
-      ),
+      data: (tasks) {
+        if (isMobile) {
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: columns.length,
+            itemBuilder: (context, index) {
+              final column = columns[index];
+              final columnTasks =
+                  tasks.where((t) => t.status == column).toList();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: _KanbanColumn(
+                  title: column,
+                  tasks: columnTasks,
+                  width: double.infinity,
+                ),
+              );
+            },
+          );
+        }
+
+        return ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          itemCount: columns.length,
+          separatorBuilder: (context, index) => const SizedBox(width: 24),
+          itemBuilder: (context, index) {
+            final column = columns[index];
+            final columnTasks = tasks.where((t) => t.status == column).toList();
+            return _KanbanColumn(title: column, tasks: columnTasks);
+          },
+        );
+      },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, stack) => Center(child: Text('Error loading tasks: $err')),
     );
   }
 }
 
-class _KanbanColumn extends StatelessWidget {
+class _KanbanColumn extends ConsumerWidget {
   final String title;
   final List<MatrixTask> tasks;
+  final double? width;
 
-  const _KanbanColumn({required this.title, required this.tasks});
+  const _KanbanColumn({required this.title, required this.tasks, this.width});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 320,
-      decoration: BoxDecoration(
-        color: SnowscapeColors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(32),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
+  Widget build(BuildContext context, WidgetRef ref) {
+    return DragTarget<MatrixTask>(
+      onWillAcceptWithDetails: (details) => details.data.status != title,
+      onAcceptWithDetails: (details) async {
+        final task = details.data;
+        final updatedTask = MatrixTask(
+          id: task.id,
+          workspaceId: task.workspaceId,
+          title: task.title,
+          description: task.description,
+          status: title,
+          priority: task.priority,
+          assignedTo: task.assignedTo,
+          parentTaskId: task.parentTaskId,
+          artifacts: task.artifacts,
+        );
+        await ref.read(dataProvider).updateTask(updatedTask);
+      },
+      builder: (context, candidateData, rejectedData) {
+        return Container(
+          width: width ?? 320,
+          constraints: width == null ? const BoxConstraints(maxWidth: 320) : null,
+          decoration: BoxDecoration(
+            color: candidateData.isNotEmpty
+                ? SnowscapeColors.surfaceContainerLow.withValues(alpha: 0.8)
+                : SnowscapeColors.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(32),
+            border: candidateData.isNotEmpty
+                ? Border.all(color: SnowscapeColors.primary, width: 2)
+                : null,
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(),
-                        shape: BoxShape.circle,
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(title,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 18)),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text('${tasks.length}',
+                              style: const TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(title,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18)),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text('${tasks.length}',
-                          style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold)),
-                    ),
+                    const Icon(Icons.more_horiz,
+                        color: SnowscapeColors.onSurfaceVariant),
                   ],
                 ),
-                const Icon(Icons.more_horiz,
-                    color: SnowscapeColors.onSurfaceVariant),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics: width != null ? const NeverScrollableScrollPhysics() : null,
+                  itemCount: tasks.length,
+                  itemBuilder: (context, index) => _TaskCard(task: tasks[index]),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: ListView.builder(
-              itemCount: tasks.length,
-              itemBuilder: (context, index) => _TaskCard(task: tasks[index]),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Color _getStatusColor() {
     switch (title) {
-      case 'To Do': return Colors.grey;
-      case 'Ready': return SnowscapeColors.primaryContainer;
-      case 'WIP': return SnowscapeColors.primary;
-      case 'Review': return SnowscapeColors.secondary;
-      case 'Done': return Colors.green;
-      default: return Colors.blue;
+      case 'Backlog':
+        return Colors.grey;
+      case 'Architect Review':
+        return SnowscapeColors.secondary;
+      case 'In Progress':
+        return SnowscapeColors.primary;
+      case 'Validation':
+        return SnowscapeColors.primaryContainer;
+      case 'Complete':
+        return Colors.green;
+      default:
+        return Colors.blue;
     }
   }
 }
@@ -383,82 +449,105 @@ class _TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => Navigator.pushNamed(context, '/task-detail'),
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: SnowscapeColors.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: SnowscapeColors.tertiaryContainer,
-                    borderRadius: BorderRadius.circular(99),
+    final card = Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: SnowscapeColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: SnowscapeColors.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  task.priority.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                    color: SnowscapeColors.onTertiaryContainer,
                   ),
-                  child: Text(
-                    task.priority.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2,
-                      color: SnowscapeColors.onTertiaryContainer,
-                    ),
-                  ),
                 ),
-                const Icon(Icons.code, color: Colors.black12),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              task.title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                height: 1.2,
               ),
+              const Icon(Icons.code, color: Colors.black12),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            task.title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              height: 1.2,
             ),
-            const SizedBox(height: 8),
-            Text(
-              task.description,
-              style: const TextStyle(
-                fontSize: 14,
-                color: SnowscapeColors.onSurfaceVariant,
-                height: 1.4,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            task.description,
+            style: const TextStyle(
+              fontSize: 14,
+              color: SnowscapeColors.onSurfaceVariant,
+              height: 1.4,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const CircleAvatar(
+                radius: 14,
+                backgroundColor: SnowscapeColors.surfaceContainerLow,
+                child: Icon(Icons.person, size: 16, color: Colors.grey),
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const CircleAvatar(
-                  radius: 14,
-                  backgroundColor: SnowscapeColors.surfaceContainerLow,
-                  child: Icon(Icons.person, size: 16, color: Colors.grey),
-                ),
-                Row(
-                  children: const [
-                    Icon(Icons.folder_outlined, size: 14, color: Colors.grey),
-                    SizedBox(width: 4),
-                    Text('core-repo',
-                        style: TextStyle(fontSize: 12, color: Colors.grey)),
-                  ],
-                ),
-              ],
-            ),
-          ],
+              Row(
+                children: const [
+                  Icon(Icons.folder_outlined, size: 14, color: Colors.grey),
+                  SizedBox(width: 4),
+                  Text('core-repo',
+                      style: TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    return LongPressDraggable<MatrixTask>(
+      data: task,
+      feedback: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: 320,
+          child: card,
         ),
+      ),
+      childWhenDragging: Opacity(
+        opacity: 0.5,
+        child: card,
+      ),
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, '/task-detail'),
+        borderRadius: BorderRadius.circular(24),
+        child: card,
       ),
     );
   }

@@ -10,9 +10,9 @@ Based on the roadmap in `design/matrix-core-design.md`, the following items are 
 
 ## Phase 4: Agent Client UI & Integration
 *   **Task 4.1: Agent Integration Tests**
-    *   **Subtask 4.1.1:** Create `integration_test/app_test.dart` for the agent app.
-    *   **Subtask 4.1.2:** Verify sign-in, navigation, and dashboard functionalities (Capability Explorer, Log Stream) on a connected Android device.
-    *   **Test:** Run `flutter test integration_test/app_test.dart -d <android-device-id>` and ensure it passes.
+    *   [x] **Subtask 4.1.1:** Create `integration_test/app_test.dart` for the agent app.
+    *   [ ] **Subtask 4.1.2:** Verify sign-in, navigation, and dashboard functionalities (Capability Explorer, Log Stream) on a connected Android device.
+    *   **Test:** Run `flutter test integration_test/app_test.dart -d <android-device-id>` and ensure it passes. (Subtask 4.1.1 verified on Android device HA1EY3WF).
 
 ## Phase 5: Advanced AI & Agentic Workflows
 *   **Task 5.1: The Oracle & Architect Personas (HQ)**
@@ -31,8 +31,17 @@ Based on the roadmap in `design/matrix-core-design.md`, the following items are 
     *   **Test:** Verify the UI reflects "Offline" or "Connected" status based on Rust hardware checks.
 
 ---
+## Completed Tasks
+*   [x] **Task 2.1: Kanban Item Management (HQ)**
+    *   [x] **Subtask 2.1.1:** Implement adding items to the Kanban via `NewTaskScreen`.
+    *   [x] **Subtask 2.1.2:** Implement moving items from column to column using Drag and Drop.
+    *   [x] **Subtask 2.1.3:** Align Kanban columns with `design/matrix-core-design.md` (Backlog, Architect Review, etc.).
+    *   [x] **Subtask 2.1.4:** Implement responsive layout (vertical list for mobile, horizontal for desktop).
+    *   **Test:** Integration test `hq/integration_test/app_test.dart` passes on Android device HA1EY3WF.
+
+---
 ## Execution Strategy
-1.  **Immediate:** Implement the `agent` integration tests (Task 4.1) to establish a baseline for both apps passing on Android.
+1.  **Immediate:** Implement the `agent` integration tests (Task 4.1) to establish a baseline for both apps passing on Android. (Done for sign-in flow).
 2.  **Next:** Implement the `Oracle & Architect` personas in HQ (Task 5.1) to allow automatic task decomposition.
 3.  **Then:** Implement the `WorktreeManager` and `AI Coding Agent` logic (Task 3.1 & 5.2) in the Agent Client to execute decomposed tasks.
 4.  **Finally:** Refine Sentinel Integration (Task 6.1) and ensure all end-to-end tests pass.
