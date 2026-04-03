@@ -96,6 +96,7 @@ Future<void> main() async {
         {'key': 'workspace_id', 'type': 'string', 'size': 50, 'required': true},
         {'key': 'title', 'type': 'string', 'size': 255, 'required': true},
         {'key': 'description', 'type': 'string', 'size': 10000, 'required': true},
+        {'key': 'content', 'type': 'string', 'size': 65535, 'required': false},
         {'key': 'status', 'type': 'string', 'size': 50, 'required': true},
         {'key': 'priority', 'type': 'string', 'size': 50, 'required': true},
         {'key': 'assigned_to', 'type': 'string', 'size': 50, 'required': false},

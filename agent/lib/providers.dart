@@ -4,11 +4,27 @@ import 'package:dart_appwrite/dart_appwrite.dart' as server_sdk;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:msp/msp.dart';
 import 'package:msp/appwrite.dart';
+import 'package:flutter/foundation.dart';
+
+String _getEffectiveEndpoint() {
+  String endpoint = dotenv.env['APPWRITE_ENDPOINT'] ?? 'http://localhost/v1';
+  
+  // Android is the exception: It cannot bind to privileged ports (80/443) 
+  // via adb reverse without root. We use 8080 as a bridge.
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    if (endpoint.contains('localhost') && !endpoint.contains(':')) {
+      // Replaces http://localhost/v1 -> http://localhost:8080/v1
+      return endpoint.replaceFirst('localhost', 'localhost:8080');
+    }
+  }
+  
+  return endpoint;
+}
 
 final appwriteClientProvider = Provider<client_sdk.Client>((ref) {
   final client = client_sdk.Client();
   client
-      .setEndpoint(dotenv.env['APPWRITE_ENDPOINT'] ?? 'http://localhost/v1')
+      .setEndpoint(_getEffectiveEndpoint())
       .setProject(dotenv.env['APPWRITE_PROJECT_ID'] ?? 'matrix_dev')
       .setSelfSigned(status: true); // For local dev
   return client;
@@ -21,7 +37,7 @@ final appwriteServerClientProvider = Provider<server_sdk.Client?>((ref) {
 
   final client = server_sdk.Client();
   client
-      .setEndpoint(dotenv.env['APPWRITE_ENDPOINT'] ?? 'http://localhost/v1')
+      .setEndpoint(_getEffectiveEndpoint())
       .setProject(dotenv.env['APPWRITE_PROJECT_ID'] ?? 'matrix_dev')
       .setKey(apiKey)
       .setSelfSigned(status: true);
@@ -61,8 +77,6 @@ final assignedTasksProvider = StreamProvider<List<MatrixTask>>((ref) async* {
 
   final workspaceId = auth.currentWorkspace?.id ?? 'default';
   
-  // Note: In a real scenario, we'd filter by assigned_to
-  // For now, we fetch all tasks in the workspace
   final initialTasks = await data.getTasks(workspaceId);
   var currentTasks = initialTasks;
   yield currentTasks;

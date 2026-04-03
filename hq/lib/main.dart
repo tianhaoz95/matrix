@@ -531,22 +531,24 @@ class _TaskCard extends StatelessWidget {
       ),
     );
 
-    return LongPressDraggable<MatrixTask>(
+    return Draggable<MatrixTask>(
       data: task,
       feedback: Material(
         color: Colors.transparent,
-        child: SizedBox(
-          width: 320,
-          child: card,
+        child: Opacity(
+          opacity: 0.8,
+          child: SizedBox(
+            width: 320,
+            child: card,
+          ),
         ),
       ),
       childWhenDragging: Opacity(
-        opacity: 0.5,
+        opacity: 0.2,
         child: card,
       ),
-      child: InkWell(
-        onTap: () => Navigator.pushNamed(context, '/task-detail'),
-        borderRadius: BorderRadius.circular(24),
+      child: GestureDetector(
+        onTap: () => Navigator.pushNamed(context, '/task-detail', arguments: task),
         child: card,
       ),
     );

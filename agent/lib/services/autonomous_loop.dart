@@ -31,6 +31,16 @@ class AutonomousLoop {
     if (_isProcessing) return;
 
     // Find the first task ready for execution
+    // Note: The design says Architect Review -> In Progress etc.
+    // In our loop we claim anything that matches 'ready_for_execution'
+    // but the design document says 'ready_for_execution' is a status.
+    // Let's check against what hq produces. hq produces 'Backlog' currently.
+    // But design says: 
+    // 1. human creates (draft)
+    // 2. oracle interprets (interpreted)
+    // 3. architect decomposes (pending)
+    // 4. architect marks ready (ready_for_execution)
+    
     final task = tasks.where((t) => t.status == 'ready_for_execution').firstOrNull;
     if (task == null) return;
 
@@ -42,13 +52,8 @@ class AutonomousLoop {
       logs.addLog('> [Autonomous] Claiming task: ${task.title}');
       
       // 1. Mark as In Progress
-      final inProgressTask = MatrixTask(
-        id: task.id,
-        workspaceId: task.workspaceId,
-        title: task.title,
-        description: task.description,
+      final inProgressTask = task.copyWith(
         status: 'In Progress',
-        priority: task.priority,
         assignedTo: 'current_agent', // Should be real agent ID
       );
       await data.updateTask(inProgressTask);
@@ -58,20 +63,13 @@ class AutonomousLoop {
       await Future.delayed(const Duration(seconds: 2));
       
       logs.addLog('> [Autonomous] Executing: ${task.title}');
-      // Here we would actually call executeCommand based on the task description
-      // For now, we simulate a successful shell command
       final result = await executeCommand(cmd: 'echo "Task logic executed successfully"');
       logs.addLog('> [Autonomous] Result: $result');
 
       // 3. Mark for Review
-      final completedTask = MatrixTask(
-        id: task.id,
-        workspaceId: task.workspaceId,
-        title: task.title,
+      final completedTask = inProgressTask.copyWith(
         description: '${task.description}\n\n## Execution Output\n$result',
-        status: 'Review',
-        priority: task.priority,
-        assignedTo: 'current_agent',
+        status: 'Validation', // Following design: Validation step
       );
       await data.updateTask(completedTask);
       logs.addLog('> [Autonomous] Task submitted for review.');

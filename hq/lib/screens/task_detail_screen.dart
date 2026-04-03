@@ -1,11 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:msp/msp.dart';
 import '../theme.dart';
 
 class TaskDetailScreen extends StatelessWidget {
-  const TaskDetailScreen({super.key});
+  final MatrixTask? task;
+
+  const TaskDetailScreen({super.key, this.task});
 
   @override
   Widget build(BuildContext context) {
+    // If task is null, try to get it from arguments (for named routes)
+    final effectiveTask = task ?? ModalRoute.of(context)?.settings.arguments as MatrixTask?;
+
+    if (effectiveTask == null) {
+      return const Scaffold(
+        body: Center(child: Text('No task selected')),
+      );
+    }
+
     return Scaffold(
       backgroundColor: SnowscapeColors.surface,
       appBar: AppBar(
@@ -44,12 +58,12 @@ class TaskDetailScreen extends StatelessWidget {
               children: [
                 _buildChip('CORE APP', SnowscapeColors.secondary, SnowscapeColors.surfaceContainerLow),
                 const SizedBox(width: 8),
-                _buildChip('WIP', SnowscapeColors.onTertiaryContainer, SnowscapeColors.tertiaryContainer, icon: Icons.pending_outlined),
+                _buildChip(effectiveTask.status.toUpperCase(), SnowscapeColors.onTertiaryContainer, SnowscapeColors.tertiaryContainer, icon: Icons.pending_outlined),
               ],
             ),
             const SizedBox(height: 24),
             Text(
-              'Refactor Iceberg Components',
+              effectiveTask.title,
               style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                     fontSize: 32,
@@ -58,59 +72,66 @@ class TaskDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 40),
             _buildSection(
-              icon: Icons.subject,
-              title: 'Description',
+              icon: Icons.description,
+              title: 'Full Document (Markdown)',
               color: SnowscapeColors.primary,
-              child: const Text(
-                'Clean up the legacy frost-engine code to improve rendering speed and ensure compatibility with the new snowflake animation engine. This is a high-priority task for the Q4 release.',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w300,
-                  color: SnowscapeColors.onSurfaceVariant,
-                  height: 1.6,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildSection(
-                    icon: Icons.terminal,
-                    title: 'Repository',
-                    color: SnowscapeColors.secondary,
-                    child: InkWell(
-                      onTap: () {},
-                      child: const Text(
-                        'github.com/yukika/iceberg-refactor',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: SnowscapeColors.primary,
-                          decoration: TextDecoration.underline,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
+              child: MarkdownBody(
+                data: effectiveTask.content ?? effectiveTask.synthesizeContent(),
+                selectable: true,
+                styleSheet: MarkdownStyleSheet(
+                  p: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                    color: SnowscapeColors.onSurfaceVariant,
+                    height: 1.6,
+                  ),
+                  h1: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: SnowscapeColors.onSurface,
+                  ),
+                  code: GoogleFonts.jetBrainsMono(
+                    backgroundColor: SnowscapeColors.surfaceContainerLow,
+                    fontSize: 14,
+                  ),
+                  codeblockDecoration: BoxDecoration(
+                    color: SnowscapeColors.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-              ],
+              ),
             ),
             const SizedBox(height: 24),
             _buildSection(
               icon: Icons.account_tree_outlined,
-              title: 'Dependencies',
+              title: 'Metadata Summary',
               color: SnowscapeColors.secondary,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
+              child: Column(
                 children: [
-                  _buildDependencyChip('Glacier Asset Audit'),
+                  _buildMetadataRow('Status', effectiveTask.status),
+                  _buildMetadataRow('Priority', effectiveTask.priority),
+                  _buildMetadataRow('Assigned To', effectiveTask.assignedTo ?? 'Unassigned'),
+                  if (effectiveTask.parentTaskId != null)
+                    _buildMetadataRow('Parent Task', effectiveTask.parentTaskId!),
                 ],
               ),
             ),
+            const SizedBox(height: 40),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMetadataRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: SnowscapeColors.onSurfaceVariant)),
+          Text(value, style: const TextStyle(color: SnowscapeColors.onSurface)),
+        ],
       ),
     );
   }
@@ -182,32 +203,6 @@ class TaskDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           child,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDependencyChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: SnowscapeColors.onSurfaceVariant.withValues(alpha: 0.1)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.link, size: 14, color: SnowscapeColors.secondary),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: SnowscapeColors.onSurface,
-            ),
-          ),
         ],
       ),
     );
