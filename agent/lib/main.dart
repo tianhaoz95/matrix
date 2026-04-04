@@ -107,13 +107,45 @@ class _OperatorDashboardState extends ConsumerState<OperatorDashboard> {
     }
   }
 
-  Future<void> _runTestCommand() async {
-    ref.read(logsProvider.notifier).addLog('> Running: ls -la');
+  Future<void> _autoCapabilityCheck() async {
+    ref.read(logsProvider.notifier).addLog('> Starting automatic capability check...');
     try {
-      final output = await executeCommand(cmd: 'ls -la');
-      ref.read(logsProvider.notifier).addLog(output);
+      final report = await automaticCapabilityCheck();
+      ref.read(logsProvider.notifier).addLog('> Automatic check complete.');
+      ref.read(logsProvider.notifier).addLog(report);
+
+      // Also update capabilities list if we found something useful
+      if (report.contains('AVAILABLE')) {
+        await _scanSystem();
+      }
     } catch (e) {
-      ref.read(logsProvider.notifier).addLog('> Error: $e');
+      ref.read(logsProvider.notifier).addLog('> Auto-check error: $e');
+    }
+  }
+
+  Future<void> _runAgent() async {
+    final settings = ref.read(modelSettingsProvider);
+    final logs = ref.read(logsProvider.notifier);
+
+    if (settings.selectedModel == 'Coding Agents' &&
+        settings.selectedCodingAgent == 'Gemini CLI') {
+      logs.addLog('> Starting Gemini CLI Agent...');
+      logs.addLog('> Running: gemini --yolo -p "hi"');
+      try {
+        // Execute the command via Rust core
+        final output = await executeCommand(cmd: 'gemini --yolo -p "hi"');
+        logs.addLog(output);
+      } catch (e) {
+        logs.addLog('> Error starting agent: $e');
+      }
+    } else {
+      String modelName = settings.selectedModel;
+      if (modelName == 'Coding Agents') {
+        modelName = settings.selectedCodingAgent;
+      } else if (modelName == 'Cloud Model') {
+        modelName = settings.selectedCloudModel;
+      }
+      logs.addLog('> [$modelName] Not implemented yet.');
     }
   }
 
@@ -137,14 +169,19 @@ class _OperatorDashboardState extends ConsumerState<OperatorDashboard> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.fact_check_outlined, color: SnowscapeColors.primary),
+            tooltip: 'Auto Capability Check',
+            onPressed: _autoCapabilityCheck,
+          ),
+          IconButton(
             icon: const Icon(Icons.search, color: SnowscapeColors.secondary),
             tooltip: 'Scan System',
             onPressed: _scanSystem,
           ),
           IconButton(
             icon: const Icon(Icons.play_arrow, color: Colors.green),
-            tooltip: 'Run Test Command',
-            onPressed: _runTestCommand,
+            tooltip: 'Run Agent/Command',
+            onPressed: _runAgent,
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: SnowscapeColors.primary),
@@ -169,12 +206,21 @@ class _OperatorDashboardState extends ConsumerState<OperatorDashboard> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Text(
-                      'Capabilities',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Capabilities',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        _IconButtonSmall(
+                          icon: Icons.refresh,
+                          onPressed: _autoCapabilityCheck,
+                        ),
+                      ],
                     ),
                   ),
                   Expanded(
@@ -305,6 +351,30 @@ class _OperatorDashboardState extends ConsumerState<OperatorDashboard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _IconButtonSmall extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _IconButtonSmall({required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: SnowscapeColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        icon: Icon(icon, size: 16, color: SnowscapeColors.primary),
+        onPressed: onPressed,
       ),
     );
   }

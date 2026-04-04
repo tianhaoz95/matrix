@@ -9,11 +9,8 @@ import 'package:flutter/foundation.dart';
 String _getEffectiveEndpoint() {
   String endpoint = dotenv.env['APPWRITE_ENDPOINT'] ?? 'http://localhost/v1';
   
-  // Android is the exception: It cannot bind to privileged ports (80/443) 
-  // via adb reverse without root. We use 8080 as a bridge.
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     if (endpoint.contains('localhost') && !endpoint.contains(':')) {
-      // Replaces http://localhost/v1 -> http://localhost:8080/v1
       return endpoint.replaceFirst('localhost', 'localhost:8080');
     }
   }
@@ -30,7 +27,6 @@ final appwriteClientProvider = Provider<client_sdk.Client>((ref) {
   return client;
 });
 
-// Provider for server-side operations if local API key is provided
 final appwriteServerClientProvider = Provider<server_sdk.Client?>((ref) {
   final apiKey = dotenv.env['APPWRITE_LOCAL_API_KEY'];
   if (apiKey == null || apiKey.isEmpty) return null;
@@ -65,7 +61,6 @@ final dataProvider = Provider<IDataProvider>((ref) {
   );
 });
 
-// Stream of tasks assigned to this specific agent
 final assignedTasksProvider = StreamProvider<List<MatrixTask>>((ref) async* {
   final data = ref.watch(dataProvider);
   final auth = ref.watch(authProvider);
@@ -93,3 +88,62 @@ final assignedTasksProvider = StreamProvider<List<MatrixTask>>((ref) async* {
     }
   }
 });
+
+// Settings Providers
+class ModelSettings {
+  final String selectedModel;
+  final String selectedCodingAgent;
+  final String selectedCloudModel;
+  final String openAiUrl;
+
+  ModelSettings({
+    required this.selectedModel,
+    required this.selectedCodingAgent,
+    required this.selectedCloudModel,
+    required this.openAiUrl,
+  });
+
+  ModelSettings copyWith({
+    String? selectedModel,
+    String? selectedCodingAgent,
+    String? selectedCloudModel,
+    String? openAiUrl,
+  }) {
+    return ModelSettings(
+      selectedModel: selectedModel ?? this.selectedModel,
+      selectedCodingAgent: selectedCodingAgent ?? this.selectedCodingAgent,
+      selectedCloudModel: selectedCloudModel ?? this.selectedCloudModel,
+      openAiUrl: openAiUrl ?? this.openAiUrl,
+    );
+  }
+}
+
+class ModelSettingsNotifier extends Notifier<ModelSettings> {
+  @override
+  ModelSettings build() {
+    return ModelSettings(
+      selectedModel: 'OpenAI API',
+      selectedCodingAgent: 'Gemini CLI',
+      selectedCloudModel: 'Gemini 3 Flash',
+      openAiUrl: 'https://api.openai.com/v1',
+    );
+  }
+
+  void updateModel(String model) {
+    state = state.copyWith(selectedModel: model);
+  }
+
+  void updateCodingAgent(String agent) {
+    state = state.copyWith(selectedCodingAgent: agent);
+  }
+
+  void updateCloudModel(String model) {
+    state = state.copyWith(selectedCloudModel: model);
+  }
+
+  void updateOpenAiUrl(String url) {
+    state = state.copyWith(openAiUrl: url);
+  }
+}
+
+final modelSettingsProvider = NotifierProvider<ModelSettingsNotifier, ModelSettings>(ModelSettingsNotifier.new);

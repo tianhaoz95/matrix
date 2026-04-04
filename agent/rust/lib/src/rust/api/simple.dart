@@ -15,3 +15,6 @@ Future<String> executeCommand({required String cmd}) =>
     RustLib.instance.api.crateApiSimpleExecuteCommand(cmd: cmd);
 
 Future<String> scanSystem() => RustLib.instance.api.crateApiSimpleScanSystem();
+
+Future<String> automaticCapabilityCheck() =>
+    RustLib.instance.api.crateApiSimpleAutomaticCapabilityCheck();

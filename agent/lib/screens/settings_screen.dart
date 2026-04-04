@@ -1,21 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme.dart';
+import '../providers.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _selectedPersona = 'The Architect';
   bool _heartbeatEnabled = true;
-  String _selectedModel = 'OpenAI API';
+  late TextEditingController _openAiUrlController;
+
+  @override
+  void initState() {
+    super.initState();
+    final settings = ref.read(modelSettingsProvider);
+    _openAiUrlController = TextEditingController(text: settings.openAiUrl);
+  }
+
+  @override
+  void dispose() {
+    _openAiUrlController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(modelSettingsProvider);
+
     return Scaffold(
       backgroundColor: SnowscapeColors.surface,
       appBar: AppBar(
@@ -42,18 +59,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             _buildSectionHeader(Icons.psychology, 'Persona Selector'),
             const SizedBox(height: 16),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 1.1,
+            Row(
               children: [
-                _buildPersonaButton('The Architect', Icons.architecture),
-                _buildPersonaButton('The Oracle', Icons.auto_awesome),
-                _buildPersonaButton('Agent', Icons.smart_toy),
-                _buildPersonaButton('Sentinel', Icons.shield),
+                Expanded(child: _buildPersonaButton('The Architect', Icons.architecture)),
+                const SizedBox(width: 8),
+                Expanded(child: _buildPersonaButton('The Oracle', Icons.auto_awesome)),
+                const SizedBox(width: 8),
+                Expanded(child: _buildPersonaButton('Agent', Icons.smart_toy)),
+                const SizedBox(width: 8),
+                Expanded(child: _buildPersonaButton('Sentinel', Icons.shield)),
               ],
             ),
             const SizedBox(height: 32),
@@ -61,12 +75,164 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 32),
             _buildSectionHeader(Icons.dns, 'Model Selection'),
             const SizedBox(height: 16),
-            _buildModelOption('OpenAI API', Icons.cloud_done),
+            _buildModelOption('OpenAI API', Icons.cloud_done, settings.selectedModel),
+            if (settings.selectedModel == 'OpenAI API') ...[
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.only(left: 16, right: 16),
+                child: TextField(
+                  controller: _openAiUrlController,
+                  onChanged: (val) => ref.read(modelSettingsProvider.notifier).updateOpenAiUrl(val),
+                  decoration: InputDecoration(
+                    labelText: 'API URL',
+                    hintText: 'https://api.openai.com/v1',
+                    filled: true,
+                    fillColor: SnowscapeColors.surfaceContainerLow,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    prefixIcon: const Icon(Icons.link, size: 20),
+                  ),
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
-            _buildModelOption('Local Model', Icons.storage),
+            _buildModelOption('Local Model', Icons.storage, settings.selectedModel),
             const SizedBox(height: 12),
-            _buildModelOption('Cloud Model', Icons.foggy),
+            _buildModelOption('Cloud Model', Icons.foggy, settings.selectedModel),
+            if (settings.selectedModel == 'Cloud Model') ...[
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    const Icon(Icons.cloud_queue,
+                        color: SnowscapeColors.secondary, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Select Gemini Model',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: SnowscapeColors.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Column(
+                  children: [
+                    _buildSubOption('Gemini 3 Flash', Icons.bolt,
+                        settings.selectedCloudModel, (val) => ref.read(modelSettingsProvider.notifier).updateCloudModel(val)),
+                    const SizedBox(height: 8),
+                    _buildSubOption('Gemini 3 Pro', Icons.auto_awesome,
+                        settings.selectedCloudModel, (val) => ref.read(modelSettingsProvider.notifier).updateCloudModel(val)),
+                    const SizedBox(height: 8),
+                    _buildSubOption('Gemini 3 Flash Lite', Icons.shutter_speed,
+                        settings.selectedCloudModel, (val) => ref.read(modelSettingsProvider.notifier).updateCloudModel(val)),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            _buildModelOption('Coding Agents', Icons.code, settings.selectedModel),
+            if (settings.selectedModel == 'Coding Agents') ...[
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    const Icon(Icons.integration_instructions,
+                        color: SnowscapeColors.secondary, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Select Agent',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: SnowscapeColors.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Column(
+                  children: [
+                    _buildSubOption('Gemini CLI', Icons.terminal, settings.selectedCodingAgent,
+                        (val) => ref.read(modelSettingsProvider.notifier).updateCodingAgent(val)),
+                    const SizedBox(height: 8),
+                    _buildSubOption(
+                        'Claude Code',
+                        Icons.data_object,
+                        settings.selectedCodingAgent,
+                        (val) => ref.read(modelSettingsProvider.notifier).updateCodingAgent(val)),
+                    const SizedBox(height: 8),
+                    _buildSubOption('Codex', Icons.menu_book, settings.selectedCodingAgent,
+                        (val) => ref.read(modelSettingsProvider.notifier).updateCodingAgent(val)),
+                    const SizedBox(height: 8),
+                    _buildSubOption('Kiro', Icons.bolt, settings.selectedCodingAgent,
+                        (val) => ref.read(modelSettingsProvider.notifier).updateCodingAgent(val)),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubOption(
+      String name, IconData icon, String groupValue, Function(String) onChanged) {
+    final isSelected = groupValue == name;
+    return InkWell(
+      onTap: () => onChanged(name),
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? SnowscapeColors.primary.withValues(alpha: 0.05)
+              : SnowscapeColors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? SnowscapeColors.primary : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon,
+                size: 18,
+                color: isSelected
+                    ? SnowscapeColors.primary
+                    : SnowscapeColors.onSurfaceVariant),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                name,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected
+                      ? SnowscapeColors.onSurface
+                      : SnowscapeColors.onSurfaceVariant,
+                ),
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle,
+                  size: 18, color: SnowscapeColors.primary),
           ],
         ),
       ),
@@ -97,6 +263,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
         decoration: BoxDecoration(
           color: SnowscapeColors.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(16),
@@ -118,8 +285,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 44,
+              height: 40,
               decoration: BoxDecoration(
                 color: isSelected
                     ? SnowscapeColors.primaryContainer.withValues(alpha: 0.2)
@@ -128,17 +295,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               child: Icon(
                 icon,
-                color: isSelected ? SnowscapeColors.primary : SnowscapeColors.onSurfaceVariant,
-                size: 24,
+                color: isSelected
+                    ? SnowscapeColors.primary
+                    : SnowscapeColors.onSurfaceVariant,
+                size: 20,
               ),
             ),
             const SizedBox(height: 12),
-            Text(
-              name,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? SnowscapeColors.primary : SnowscapeColors.onSurfaceVariant,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                name,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected
+                      ? SnowscapeColors.primary
+                      : SnowscapeColors.onSurfaceVariant,
+                ),
               ),
             ),
           ],
@@ -198,10 +372,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildModelOption(String name, IconData icon) {
-    final isSelected = _selectedModel == name;
+  Widget _buildModelOption(String name, IconData icon, String groupValue) {
+    final isSelected = groupValue == name;
     return InkWell(
-      onTap: () => setState(() => _selectedModel = name),
+      onTap: () => ref.read(modelSettingsProvider.notifier).updateModel(name),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -247,9 +421,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Radio<String>(
               value: name,
               // ignore: deprecated_member_use
-              groupValue: _selectedModel,
+              groupValue: groupValue,
               // ignore: deprecated_member_use
-              onChanged: (val) => setState(() => _selectedModel = val!),
+              onChanged: (val) => ref.read(modelSettingsProvider.notifier).updateModel(val!),
               activeColor: SnowscapeColors.primary,
             ),
           ],
