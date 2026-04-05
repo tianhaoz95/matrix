@@ -5,16 +5,17 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:msp/msp.dart';
 import 'package:msp/appwrite.dart';
 import 'package:flutter/foundation.dart';
+import 'environment.dart';
 
 String _getEffectiveEndpoint() {
-  String endpoint = dotenv.env['APPWRITE_ENDPOINT'] ?? 'http://localhost/v1';
-  
+  String endpoint = Environment.appwritePublicEndpoint;
+
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     if (endpoint.contains('localhost') && !endpoint.contains(':')) {
       return endpoint.replaceFirst('localhost', 'localhost:8080');
     }
   }
-  
+
   return endpoint;
 }
 
@@ -22,7 +23,7 @@ final appwriteClientProvider = Provider<client_sdk.Client>((ref) {
   final client = client_sdk.Client();
   client
       .setEndpoint(_getEffectiveEndpoint())
-      .setProject(dotenv.env['APPWRITE_PROJECT_ID'] ?? 'matrix_dev')
+      .setProject(Environment.appwriteProjectId)
       .setSelfSigned(status: true);
   return client;
 });
@@ -34,12 +35,11 @@ final appwriteServerClientProvider = Provider<server_sdk.Client?>((ref) {
   final client = server_sdk.Client();
   client
       .setEndpoint(_getEffectiveEndpoint())
-      .setProject(dotenv.env['APPWRITE_PROJECT_ID'] ?? 'matrix_dev')
+      .setProject(Environment.appwriteProjectId)
       .setKey(apiKey)
       .setSelfSigned(status: true);
   return client;
 });
-
 final authProvider = Provider<IAuthProvider>((ref) {
   final client = ref.watch(appwriteClientProvider);
   return AppwriteAuthProvider(client);

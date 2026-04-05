@@ -2,9 +2,21 @@
 
 # Matrix Android Installation Script
 # This script builds and installs both Matrix HQ and Matrix Agent onto a connected device.
+# Usage: ./scripts/install_android.sh [local|production]
 
 # Exit on error
 set -e
+
+# Default to local if no argument provided
+ENV_TYPE=${1:-local}
+
+if [[ "$ENV_TYPE" != "local" && "$ENV_TYPE" != "production" ]]; then
+    echo "Error: Invalid environment type. Use 'local' or 'production'."
+    echo "Usage: ./scripts/install_android.sh [local|production]"
+    exit 1
+fi
+
+echo "Deploying to: $ENV_TYPE"
 
 # Check if adb is installed
 if ! command -v adb &> /dev/null
@@ -41,10 +53,8 @@ build_and_install() {
     flutter pub get
     
     # Build APK
-    echo "Building Release APK for $APP_NAME..."
-    # Note: Using --split-per-abi can make the install faster if only one architecture is needed,
-    # but for a general script, a standard fat APK or universal one is safer.
-    flutter build apk --release
+    echo "Building Release APK for $APP_NAME ($ENV_TYPE)..."
+    flutter build apk --release --dart-define-from-file=.env
     
     # Find the APK
     local APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
@@ -58,7 +68,6 @@ build_and_install() {
         echo "Successfully built APK at $APK_PATH"
         echo "Installing $APP_NAME onto device..."
         # -r: replace existing application
-        # -d: allow version code downgrade (optional, but useful for dev)
         # -g: grant all runtime permissions
         adb install -r -g "$APK_PATH"
         echo "Done: $APP_NAME is now installed."
@@ -74,6 +83,14 @@ build_and_install() {
 SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_PATH")"
 cd "$PROJECT_ROOT"
+
+# Setup environment file
+if [ -f ".env.$ENV_TYPE" ]; then
+    echo "Switching to .env.$ENV_TYPE configuration..."
+    cp ".env.$ENV_TYPE" ".env"
+else
+    echo "Warning: .env.$ENV_TYPE not found. Using existing .env file."
+fi
 
 # Install HQ
 build_and_install "hq" "Matrix Headquarters (HQ)"
