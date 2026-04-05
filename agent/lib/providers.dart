@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:msp/msp.dart';
 import 'package:msp/appwrite.dart';
 import 'package:flutter/foundation.dart';
+import 'package:rust/rust.dart' as rust;
 
 String _getEffectiveEndpoint() {
   String endpoint = dotenv.env['APPWRITE_ENDPOINT'] ?? 'http://localhost/v1';
@@ -88,6 +89,24 @@ final assignedTasksProvider = StreamProvider<List<MatrixTask>>((ref) async* {
     }
   }
 });
+
+// Rust Core Provider for Mocking
+class RustCore {
+  Future<String> executeCommand({required String cmd}) => rust.executeCommand(cmd: cmd);
+  Future<String> scanSystem() => rust.scanSystem();
+  Future<String> automaticCapabilityCheck() => rust.automaticCapabilityCheck();
+  Future<String> cloneRepository({required String url, required String targetPath}) => 
+      rust.cloneRepository(url: url, targetPath: targetPath);
+  Future<String> createAgentWorktree({required String repoPath, required String branchName, required String targetPath}) =>
+      rust.createAgentWorktree(repoPath: repoPath, branchName: branchName, targetPath: targetPath);
+  Future<List<String>> listFilesRecursive({required String path}) => rust.listFilesRecursive(path: path);
+  Future<String> startMcpServer({required int port}) => rust.startMcpServer(port: port);
+  Stream<rust.TaskUpdateEvent> listenMcpEvents() => rust.listenMcpEvents();
+  Future<String> runAgentTask({required rust.MatrixAIProvider provider, required String prompt, required String workingDir}) =>
+      rust.runAgentTask(provider: provider, prompt: prompt, workingDir: workingDir);
+}
+
+final rustProvider = Provider((ref) => RustCore());
 
 // Settings Providers
 class ModelSettings {

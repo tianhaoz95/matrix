@@ -11,6 +11,7 @@ class MatrixTask {
   final String? parentTaskId;
   final List<String> artifacts;
   final String? content; // The full markdown content with YAML front matter
+  final String? repositoryUrl;
 
   MatrixTask({
     required this.id,
@@ -23,6 +24,7 @@ class MatrixTask {
     this.parentTaskId,
     this.artifacts = const [],
     this.content,
+    this.repositoryUrl,
   });
 
   factory MatrixTask.fromMap(Map<String, dynamic> map) {
@@ -37,6 +39,7 @@ class MatrixTask {
       parentTaskId: map['parent_task_id'],
       artifacts: List<String>.from(map['artifacts'] ?? []),
       content: map['content'],
+      repositoryUrl: map['repository_url'],
     );
   }
 
@@ -51,6 +54,7 @@ class MatrixTask {
     buffer.writeln('priority: $priority');
     if (assignedTo != null) buffer.writeln('assigned_to: $assignedTo');
     if (parentTaskId != null) buffer.writeln('parent_task_id: $parentTaskId');
+    if (repositoryUrl != null) buffer.writeln('repository_url: $repositoryUrl');
     if (artifacts.isNotEmpty) {
       buffer.writeln('artifacts:');
       for (final artifact in artifacts) {
@@ -104,6 +108,7 @@ class MatrixTask {
       parentTaskId: yamlMap['parent_task_id']?.toString(),
       artifacts: yamlMap['artifacts'] != null ? List<String>.from(yamlMap['artifacts']) : const [],
       content: content,
+      repositoryUrl: yamlMap['repository_url']?.toString(),
     );
   }
 
@@ -118,6 +123,7 @@ class MatrixTask {
       'priority': priority,
       'parent_task_id': parentTaskId,
       'artifacts': artifacts,
+      'repository_url': repositoryUrl,
     };
   }
 
@@ -133,6 +139,7 @@ class MatrixTask {
     String? parentTaskId,
     List<String>? artifacts,
     String? content,
+    String? repositoryUrl,
   }) {
     return MatrixTask(
       id: id ?? this.id,
@@ -145,6 +152,7 @@ class MatrixTask {
       parentTaskId: parentTaskId ?? this.parentTaskId,
       artifacts: artifacts ?? this.artifacts,
       content: content ?? this.content,
+      repositoryUrl: repositoryUrl ?? this.repositoryUrl,
     );
   }
 }

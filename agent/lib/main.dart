@@ -43,6 +43,18 @@ class CapabilitiesNotifier extends Notifier<List<String>> {
 
 final capabilitiesProvider = NotifierProvider<CapabilitiesNotifier, List<String>>(CapabilitiesNotifier.new);
 
+// Worktree state provider
+class WorktreeNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void setWorktree(String? path) {
+    state = path;
+  }
+}
+
+final worktreeProvider = NotifierProvider<WorktreeNotifier, String?>(WorktreeNotifier.new);
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init();
@@ -153,6 +165,7 @@ class _OperatorDashboardState extends ConsumerState<OperatorDashboard> {
   Widget build(BuildContext context) {
     final logs = ref.watch(logsProvider);
     final capabilities = ref.watch(capabilitiesProvider);
+    final activeWorktree = ref.watch(worktreeProvider);
 
     return Scaffold(
       backgroundColor: SnowscapeColors.surface,
@@ -240,6 +253,37 @@ class _OperatorDashboardState extends ConsumerState<OperatorDashboard> {
                             },
                           ),
                   ),
+                  if (activeWorktree != null) ...[
+                    const Divider(indent: 24, endIndent: 24),
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Active Worktree',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: SnowscapeColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: SnowscapeColors.surfaceContainerLowest,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              activeWorktree,
+                              style: const TextStyle(fontSize: 10, fontFamily: 'monospace'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -284,7 +328,7 @@ class _OperatorDashboardState extends ConsumerState<OperatorDashboard> {
                           children: [
                             const Icon(Icons.circle, color: Colors.green, size: 8),
                             const SizedBox(width: 8),
-                            Text(
+                            const Text(
                               'ACTIVE',
                               style: TextStyle(
                                 fontSize: 10,

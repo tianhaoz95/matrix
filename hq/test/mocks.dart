@@ -7,15 +7,11 @@ class MockAuthProvider implements IAuthProvider {
   final _authStateController = StreamController<bool>.broadcast();
 
   MockAuthProvider() {
-    // Emit initial state
     Future.microtask(() => _authStateController.add(_isAuthenticated));
   }
 
   @override
-  Future<void> signUp({required String email, required String password, required String name}) async {
-    _isAuthenticated = false;
-    _authStateController.add(false);
-  }
+  Future<void> signUp({required String email, required String password, required String name}) async {}
 
   @override
   Future<void> signIn({required String email, required String password}) async {
@@ -38,9 +34,7 @@ class MockAuthProvider implements IAuthProvider {
   Future<Workspace> createWorkspace({required String name}) async => Workspace(id: 'w2', name: name);
 
   @override
-  Future<void> selectWorkspace(String workspaceId) async {
-    _currentWorkspace = Workspace(id: workspaceId, name: 'Workspace $workspaceId');
-  }
+  Future<void> selectWorkspace(String workspaceId) async {}
 
   @override
   Workspace? get currentWorkspace => _currentWorkspace;
@@ -57,7 +51,7 @@ class MockDataProvider implements IDataProvider {
   final _taskUpdateController = StreamController<MatrixTask>.broadcast();
 
   @override
-  Future<List<MatrixTask>> getTasks(String workspaceId) async => _tasks;
+  Future<List<MatrixTask>> getTasks(String workspaceId) async => List.from(_tasks);
 
   @override
   Future<MatrixTask> createTask(MatrixTask task) async {
@@ -82,6 +76,7 @@ class MockDataProvider implements IDataProvider {
     } else {
       _tasks.add(task);
     }
+    // EMIT A COPY to ensure no mutation issues
     _taskUpdateController.add(task);
     return task;
   }

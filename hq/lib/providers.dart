@@ -9,11 +9,8 @@ import 'package:flutter/foundation.dart';
 String _getEffectiveEndpoint() {
   String endpoint = dotenv.env['APPWRITE_ENDPOINT'] ?? 'http://localhost/v1';
   
-  // Android is the exception: It cannot bind to privileged ports (80/443) 
-  // via adb reverse without root. We use 8080 as a bridge.
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     if (endpoint.contains('localhost') && !endpoint.contains(':')) {
-      // Replaces http://localhost/v1 -> http://localhost:8080/v1
       return endpoint.replaceFirst('localhost', 'localhost:8080');
     }
   }
@@ -30,7 +27,6 @@ final appwriteClientProvider = Provider<client_sdk.Client>((ref) {
   return client;
 });
 
-// Provider for server-side operations if local API key is provided
 final appwriteServerClientProvider = Provider<server_sdk.Client?>((ref) {
   final apiKey = dotenv.env['APPWRITE_LOCAL_API_KEY'];
   if (apiKey == null || apiKey.isEmpty) return null;
@@ -65,33 +61,29 @@ final dataProvider = Provider<IDataProvider>((ref) {
   );
 });
 
-// Real-time tasks provider
+// A simpler, non-autodispose provider for testing reliability
 final tasksStreamProvider = StreamProvider<List<MatrixTask>>((ref) async* {
   final data = ref.watch(dataProvider);
   final auth = ref.watch(authProvider);
   
-  // Wait for auth and workspace
   if (!auth.isAuthenticated) {
     yield [];
     return;
   }
 
-  // Initial fetch
   final workspaceId = auth.currentWorkspace?.id ?? 'default';
+  
   final initialTasks = await data.getTasks(workspaceId);
-  var currentTasks = initialTasks;
-  yield currentTasks;
+  final currentTasks = List<MatrixTask>.from(initialTasks);
+  yield List.unmodifiable(currentTasks);
 
-  // Listen for updates
   await for (final update in data.taskUpdates) {
-    if (update.workspaceId == workspaceId) {
-      final index = currentTasks.indexWhere((t) => t.id == update.id);
-      if (index != -1) {
-        currentTasks[index] = update;
-      } else {
-        currentTasks.add(update);
-      }
-      yield [...currentTasks];
+    final index = currentTasks.indexWhere((t) => t.id == update.id);
+    if (index != -1) {
+      currentTasks[index] = update;
+    } else {
+      currentTasks.add(update);
     }
+    yield List.unmodifiable(currentTasks);
   }
 });

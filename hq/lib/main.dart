@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,8 @@ import 'screens/profile_screen.dart';
 import 'screens/new_task_screen.dart';
 import 'screens/task_detail_screen.dart';
 
+import 'services/matrix_brain.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
@@ -19,7 +22,12 @@ Future<void> main() async {
   } catch (e) {
     // .env might not exist in all environments, fallback to defaults in provider
   }
-  runApp(const ProviderScope(child: MatrixHQApp()));
+  
+  final container = ProviderContainer();
+  // Start the Brain service
+  container.read(matrixBrainProvider).start();
+
+  runApp(UncontrolledProviderScope(container: container, child: const MatrixHQApp()));
 }
 
 class MatrixHQApp extends ConsumerWidget {
@@ -36,7 +44,7 @@ class MatrixHQApp extends ConsumerWidget {
       home: authState.when(
         data: (isAuthenticated) => isAuthenticated ? const DashboardScreen() : const SignInScreen(),
         loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-        error: (e, stack) => const SignInScreen(),
+        error: (e, s) => const SignInScreen(),
       ),
       routes: {
         '/dashboard': (context) => const DashboardScreen(),
@@ -50,46 +58,6 @@ class MatrixHQApp extends ConsumerWidget {
     );
   }
 }
-
-// --- State Management ---
-final tasksProvider = Provider<List<MatrixTask>>((ref) {
-  return [
-    MatrixTask(
-      id: '1',
-      workspaceId: 'w1',
-      title: 'Refactor Iceberg Components',
-      description: 'Clean up the legacy frost-engine code to improve rendering speed.',
-      status: 'To Do',
-      priority: 'high',
-    ),
-    MatrixTask(
-      id: '2',
-      workspaceId: 'w1',
-      title: 'Snowflake Animation Path',
-      description: 'Design the delightful physics for the falling snow background effect.',
-      status: 'To Do',
-      priority: 'normal',
-    ),
-    MatrixTask(
-      id: '3',
-      workspaceId: 'w1',
-      title: 'Winter Launch Campaign',
-      description: 'Finalize the assets for the December 1st announcement.',
-      status: 'Ready',
-      priority: 'high',
-    ),
-    MatrixTask(
-      id: '4',
-      workspaceId: 'w1',
-      title: 'Cold-Storage Migration',
-      description: 'Moving non-active board data to the glacier-tier server for cost optimization.',
-      status: 'WIP',
-      priority: 'high',
-    ),
-  ];
-});
-
-// --- UI Components ---
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -175,42 +143,72 @@ class _IconButton extends StatelessWidget {
   }
 }
 
-class _OracleFeed extends StatelessWidget {
+class _OracleFeed extends ConsumerWidget {
   const _OracleFeed();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tasksValue = ref.watch(tasksStreamProvider);
+
     return Container(
       height: 120,
       padding: const EdgeInsets.only(bottom: 16),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        children: const [
-          _UpdateCard(
-            title: 'Sprint Review Today',
-            content: 'The Q4 roadmap review starts at 2:00 PM in the main lounge.',
-            icon: Icons.notifications,
-            iconBg: Color(0xFFE3F2FD),
-            iconColor: SnowscapeColors.primary,
-          ),
-          _UpdateCard(
-            title: 'New UI Guidelines',
-            content: "Updated 'Glacier Drift' component library is now live.",
-            icon: Icons.star,
-            iconBg: Color(0xFFFFF8E1),
-            iconColor: Colors.orange,
-          ),
-          _UpdateCard(
-            title: 'Core V2 Deployed',
-            content: 'Server migrations are complete. 30% speed boost observed.',
-            icon: Icons.celebration,
-            iconBg: Color(0xFFE8F5E9),
-            iconColor: Colors.green,
-          ),
-        ],
+      child: tasksValue.when(
+        data: (tasks) {
+          final recentTasks = tasks.reversed.take(5).toList();
+          if (recentTasks.isEmpty) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: Text('Awaiting first prophecy...', style: TextStyle(color: Colors.grey)),
+            );
+          }
+          return ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            itemCount: recentTasks.length,
+            itemBuilder: (context, index) {
+              final task = recentTasks[index];
+              return _UpdateCard(
+                title: task.title,
+                content: 'Status: ${task.status}',
+                icon: _getIconForStatus(task.status),
+                iconBg: _getIconBgForStatus(task.status),
+                iconColor: _getIconColorForStatus(task.status),
+              );
+            },
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, s) => const SizedBox(),
       ),
     );
+  }
+
+  IconData _getIconForStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'draft': return Icons.edit_note;
+      case 'interpreted': return Icons.auto_awesome;
+      case 'complete': return Icons.check_circle;
+      default: return Icons.notifications;
+    }
+  }
+
+  Color _getIconBgForStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'draft': return const Color(0xFFE3F2FD);
+      case 'interpreted': return const Color(0xFFFFF8E1);
+      case 'complete': return const Color(0xFFE8F5E9);
+      default: return const Color(0xFFF5F5F5);
+    }
+  }
+
+  Color _getIconColorForStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'draft': return Colors.blue;
+      case 'interpreted': return Colors.orange;
+      case 'complete': return Colors.green;
+      default: return Colors.grey;
+    }
   }
 }
 
@@ -279,6 +277,8 @@ class _MatrixKanban extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksValue = ref.watch(tasksStreamProvider);
     final columns = [
+      'Draft',
+      'Interpreted',
       'Backlog',
       'Architect Review',
       'In Progress',
@@ -297,10 +297,11 @@ class _MatrixKanban extends ConsumerWidget {
             itemBuilder: (context, index) {
               final column = columns[index];
               final columnTasks =
-                  tasks.where((t) => t.status == column).toList();
+                  tasks.where((t) => t.status.toLowerCase() == column.toLowerCase()).toList();
               return Padding(
                 padding: const EdgeInsets.only(bottom: 24),
                 child: _KanbanColumn(
+                  key: ValueKey('column_${column.toLowerCase()}'),
                   title: column,
                   tasks: columnTasks,
                   width: double.infinity,
@@ -317,8 +318,12 @@ class _MatrixKanban extends ConsumerWidget {
           separatorBuilder: (context, index) => const SizedBox(width: 24),
           itemBuilder: (context, index) {
             final column = columns[index];
-            final columnTasks = tasks.where((t) => t.status == column).toList();
-            return _KanbanColumn(title: column, tasks: columnTasks);
+            final columnTasks = tasks.where((t) => t.status.toLowerCase() == column.toLowerCase()).toList();
+            return _KanbanColumn(
+              key: ValueKey('column_${column.toLowerCase()}'),
+              title: column,
+              tasks: columnTasks,
+            );
           },
         );
       },
@@ -333,7 +338,7 @@ class _KanbanColumn extends ConsumerWidget {
   final List<MatrixTask> tasks;
   final double? width;
 
-  const _KanbanColumn({required this.title, required this.tasks, this.width});
+  const _KanbanColumn({super.key, required this.title, required this.tasks, this.width});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -341,17 +346,7 @@ class _KanbanColumn extends ConsumerWidget {
       onWillAcceptWithDetails: (details) => details.data.status != title,
       onAcceptWithDetails: (details) async {
         final task = details.data;
-        final updatedTask = MatrixTask(
-          id: task.id,
-          workspaceId: task.workspaceId,
-          title: task.title,
-          description: task.description,
-          status: title,
-          priority: task.priority,
-          assignedTo: task.assignedTo,
-          parentTaskId: task.parentTaskId,
-          artifacts: task.artifacts,
-        );
+        final updatedTask = task.copyWith(status: title);
         await ref.read(dataProvider).updateTask(updatedTask);
       },
       builder: (context, candidateData, rejectedData) {
@@ -415,7 +410,10 @@ class _KanbanColumn extends ConsumerWidget {
                   shrinkWrap: true,
                   physics: width != null ? const NeverScrollableScrollPhysics() : null,
                   itemCount: tasks.length,
-                  itemBuilder: (context, index) => _TaskCard(task: tasks[index]),
+                  itemBuilder: (context, index) => _TaskCard(
+                    key: ValueKey('task_${tasks[index].id}'),
+                    task: tasks[index],
+                  ),
                 ),
               ),
             ],
@@ -427,6 +425,10 @@ class _KanbanColumn extends ConsumerWidget {
 
   Color _getStatusColor() {
     switch (title) {
+      case 'Draft':
+        return Colors.blueGrey;
+      case 'Interpreted':
+        return Colors.purpleAccent;
       case 'Backlog':
         return Colors.grey;
       case 'Architect Review':
@@ -445,7 +447,7 @@ class _KanbanColumn extends ConsumerWidget {
 
 class _TaskCard extends StatelessWidget {
   final MatrixTask task;
-  const _TaskCard({required this.task});
+  const _TaskCard({super.key, required this.task});
 
   @override
   Widget build(BuildContext context) {

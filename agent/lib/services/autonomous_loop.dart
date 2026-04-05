@@ -1,81 +1,170 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:msp/msp.dart';
 import '../providers.dart';
 import '../main.dart';
-import 'package:rust/rust.dart';
+import 'coding_agent.dart';
+import 'package:path/path.dart' as p;
 
 class AutonomousLoop {
   final Ref ref;
   ProviderSubscription? _subscription;
+  StreamSubscription? _mcpEventSubscription;
   bool _isProcessing = false;
+  bool _isServerStarted = false;
 
   AutonomousLoop(this.ref);
 
   void start() {
     _subscription?.close();
     _subscription = ref.listen(assignedTasksProvider, (previous, next) {
-      next.whenData((tasks) {
+      final tasks = next.value;
+      if (tasks != null) {
         _checkAndExecute(tasks);
-      });
+      }
     }, fireImmediately: true);
     ref.read(logsProvider.notifier).addLog('> Autonomous loop started. Watching for tasks...');
+    
+    _ensureMcpServerStarted();
   }
 
   void stop() {
     _subscription?.close();
+    _mcpEventSubscription?.cancel();
     ref.read(logsProvider.notifier).addLog('> Autonomous loop stopped.');
+  }
+
+  Future<void> _ensureMcpServerStarted() async {
+    if (_isServerStarted) return;
+    _isServerStarted = true;
+
+    final rust = ref.read(rustProvider);
+    final logs = ref.read(logsProvider.notifier);
+
+    // 1. Start SSE Server in background
+    unawaited(rust.startMcpServer(port: 8000).then((res) {
+      logs.addLog('> [MCP] Server status: $res');
+    }));
+
+    // 2. Listen for MCP events (Task Updates)
+    _mcpEventSubscription = rust.listenMcpEvents().listen((event) async {
+      logs.addLog('> [MCP] Received task update for ${event.taskId}: status=${event.status}');
+      
+      final data = ref.read(dataProvider);
+      final auth = ref.read(authProvider);
+      
+      // Fetch current task
+      final workspaceId = auth.currentWorkspace?.id ?? 'default';
+      final tasks = await data.getTasks(workspaceId);
+      final task = tasks.where((t) => t.id == event.taskId).firstOrNull;
+      
+      if (task != null) {
+        final updatedTask = task.copyWith(
+          status: event.status,
+          assignedTo: event.assignedTo,
+          description: event.report != null ? '${task.description}\n\n## AI Report\n${event.report}' : null,
+        );
+        await data.updateTask(updatedTask);
+        logs.addLog('> [HQ] Task ${event.taskId} updated successfully.');
+      }
+    });
+
+    logs.addLog('> [MCP] SSE Singleton started on port 8000.');
   }
 
   Future<void> _checkAndExecute(List<MatrixTask> tasks) async {
     if (_isProcessing) return;
 
-    // Find the first task ready for execution
-    // Note: The design says Architect Review -> In Progress etc.
-    // In our loop we claim anything that matches 'ready_for_execution'
-    // but the design document says 'ready_for_execution' is a status.
-    // Let's check against what hq produces. hq produces 'Backlog' currently.
-    // But design says: 
-    // 1. human creates (draft)
-    // 2. oracle interprets (interpreted)
-    // 3. architect decomposes (pending)
-    // 4. architect marks ready (ready_for_execution)
-    
-    final task = tasks.where((t) => t.status == 'ready_for_execution').firstOrNull;
+    final task = tasks.where((t) => t.status.toLowerCase() == 'ready_for_execution' || t.status.toLowerCase() == 'backlog').firstOrNull;
     if (task == null) return;
 
     _isProcessing = true;
     final logs = ref.read(logsProvider.notifier);
     final data = ref.read(dataProvider);
+    final agent = ref.read(codingAgentProvider);
+    final rust = ref.read(rustProvider);
+    final worktree = ref.read(worktreeProvider.notifier);
 
     try {
       logs.addLog('> [Autonomous] Claiming task: ${task.title}');
       
-      // 1. Mark as In Progress
+      // 1. Mark as In Progress (manual claim before AI starts)
       final inProgressTask = task.copyWith(
         status: 'In Progress',
-        assignedTo: 'current_agent', // Should be real agent ID
+        assignedTo: 'current_agent', 
       );
       await data.updateTask(inProgressTask);
 
-      // 2. Mock Execution Loop
-      logs.addLog('> [Autonomous] Planning local execution...');
-      await Future.delayed(const Duration(seconds: 2));
-      
-      logs.addLog('> [Autonomous] Executing: ${task.title}');
-      final result = await executeCommand(cmd: 'echo "Task logic executed successfully"');
-      logs.addLog('> [Autonomous] Result: $result');
+      String? executionDir;
 
-      // 3. Mark for Review
+      // 2. Handle Git & Worktree if repositoryUrl is provided
+      if (task.repositoryUrl != null && task.repositoryUrl!.isNotEmpty) {
+        logs.addLog('> [Autonomous] Git repository detected: ${task.repositoryUrl}');
+        
+        final tempDir = Directory.systemTemp.createTempSync('matrix_agent_');
+        final repoPath = p.join(tempDir.path, 'repo');
+        final wtPath = p.join(tempDir.path, 'worktree');
+
+        logs.addLog('> [Autonomous] Cloning repository...');
+        final cloneRes = await rust.cloneRepository(url: task.repositoryUrl!, targetPath: repoPath);
+        logs.addLog('> [Autonomous] $cloneRes');
+
+        if (cloneRes.contains('Successfully cloned')) {
+          logs.addLog('> [Autonomous] Creating isolated worktree...');
+          final branchName = 'agent-task-${task.id}';
+          final wtRes = await rust.createAgentWorktree(
+            repoPath: repoPath,
+            branchName: branchName,
+            targetPath: wtPath,
+          );
+          logs.addLog('> [Autonomous] $wtRes');
+
+          if (wtRes.contains('Successfully created worktree')) {
+            executionDir = wtPath;
+            worktree.setWorktree(wtPath);
+            logs.addLog('> [Autonomous] Isolated environment ready at $wtPath');
+          }
+        }
+      }
+
+      // 3. Setup Gemini CLI config for SSE
+      if (executionDir != null) {
+        final geminiConfigDir = Directory(p.join(executionDir, '.gemini'));
+        // ignore: avoid_slow_async_io
+        if (!await geminiConfigDir.exists()) await geminiConfigDir.create();
+        
+        final settingsFile = File(p.join(geminiConfigDir.path, 'settings.json'));
+        await settingsFile.writeAsString(jsonEncode({
+          "mcpServers": {
+            "matrix-hub": {
+              "url": "http://localhost:8000/sse"
+            }
+          }
+        }));
+        logs.addLog('> [Autonomous] MCP configuration injected into worktree.');
+      }
+
+      // 4. Execution Loop with Reasoning
+      logs.addLog('> [Autonomous] Triggering AI reasoning...');
+      final result = await agent.executeWithReasoning(inProgressTask, workingDir: executionDir);
+      logs.addLog('> [Autonomous] Final Result: $result');
+
+      // 5. Mark for Validation
       final completedTask = inProgressTask.copyWith(
-        description: '${task.description}\n\n## Execution Output\n$result',
-        status: 'Validation', // Following design: Validation step
+        description: '${task.description}\n\n## AI Execution Output\n$result',
+        status: 'Validation',
       );
       await data.updateTask(completedTask);
-      logs.addLog('> [Autonomous] Task submitted for review.');
+      logs.addLog('> [Autonomous] Task submitted for Validation.');
+
+      // Cleanup UI
+      worktree.setWorktree(null);
 
     } catch (e) {
       logs.addLog('> [Autonomous] Task failed: $e');
+      worktree.setWorktree(null);
     } finally {
       _isProcessing = false;
     }

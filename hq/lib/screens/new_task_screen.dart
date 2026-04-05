@@ -45,7 +45,7 @@ class _NewTaskScreenState extends ConsumerState<NewTaskScreen> {
         workspaceId: auth.currentWorkspace?.id ?? 'default',
         title: title,
         description: description,
-        status: 'Backlog',
+        status: 'Draft',
         priority: 'high',
       );
 

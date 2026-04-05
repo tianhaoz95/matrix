@@ -15,12 +15,19 @@ anyhow = "1.0"
 thiserror = "2.0"
 async-trait = "0.1"
 tracing = "0.1"
+tempfile = "3.10"
+lazy_static = "1.4"
+axum = { version = "0.8.1", features = ["macros"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+futures-util = "0.3"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+tokio-stream = "0.1"
 
 # Vibe Kanban Crates
 executors = { path = "../../../third_party/vibe-kanban/crates/executors" }
 worktree-manager = { path = "../../../third_party/vibe-kanban/crates/worktree-manager" }
 workspace_utils = { path = "../../../third_party/vibe-kanban/crates/utils", package = "utils" }
-git = { path = "../../../third_party/vibe-kanban/crates/git" }
+git = { path = "../../../third_party/vibe-kanban/crates/git", features = ["cloud"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

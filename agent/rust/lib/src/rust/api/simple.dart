@@ -4,9 +4,12 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import '../mcp_server.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `run_command_internal`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `TASK_UPDATE_TX`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `deref`, `initialize`
 
 String greet({required String name}) =>
     RustLib.instance.api.crateApiSimpleGreet(name: name);
@@ -18,3 +21,42 @@ Future<String> scanSystem() => RustLib.instance.api.crateApiSimpleScanSystem();
 
 Future<String> automaticCapabilityCheck() =>
     RustLib.instance.api.crateApiSimpleAutomaticCapabilityCheck();
+
+Future<String> cloneRepository({
+  required String url,
+  required String targetPath,
+}) => RustLib.instance.api.crateApiSimpleCloneRepository(
+  url: url,
+  targetPath: targetPath,
+);
+
+Future<String> createAgentWorktree({
+  required String repoPath,
+  required String branchName,
+  required String targetPath,
+}) => RustLib.instance.api.crateApiSimpleCreateAgentWorktree(
+  repoPath: repoPath,
+  branchName: branchName,
+  targetPath: targetPath,
+);
+
+Future<List<String>> listFilesRecursive({required String path}) =>
+    RustLib.instance.api.crateApiSimpleListFilesRecursive(path: path);
+
+Future<String> runAgentTask({
+  required MatrixAIProvider provider,
+  required String prompt,
+  required String workingDir,
+}) => RustLib.instance.api.crateApiSimpleRunAgentTask(
+  provider: provider,
+  prompt: prompt,
+  workingDir: workingDir,
+);
+
+Future<String> startMcpServer({required int port}) =>
+    RustLib.instance.api.crateApiSimpleStartMcpServer(port: port);
+
+Stream<TaskUpdateEvent> listenMcpEvents() =>
+    RustLib.instance.api.crateApiSimpleListenMcpEvents();
+
+enum MatrixAIProvider { gemini, claude, codex }
