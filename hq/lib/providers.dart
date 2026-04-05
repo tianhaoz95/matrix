@@ -54,36 +54,66 @@ final dataProvider = Provider<IDataProvider>((ref) {
   final client = ref.watch(appwriteClientProvider);
   return AppwriteDataProvider(
     client: client,
-    databaseId: 'main',
+    databaseId: Environment.appwriteDatabaseId,
     tasksCollectionId: 'tasks',
     agentsCollectionId: 'agents',
     messagesCollectionId: 'messages',
   );
 });
 
-// A simpler, non-autodispose provider for testing reliability
-final tasksStreamProvider = StreamProvider<List<MatrixTask>>((ref) async* {
-  final data = ref.watch(dataProvider);
-  final auth = ref.watch(authProvider);
-  
-  if (!auth.isAuthenticated) {
-    yield [];
-    return;
-  }
-
-  final workspaceId = auth.currentWorkspace?.id ?? 'default';
-  
-  final initialTasks = await data.getTasks(workspaceId);
-  final currentTasks = List<MatrixTask>.from(initialTasks);
-  yield List.unmodifiable(currentTasks);
-
-  await for (final update in data.taskUpdates) {
-    final index = currentTasks.indexWhere((t) => t.id == update.id);
-    if (index != -1) {
-      currentTasks[index] = update;
-    } else {
-      currentTasks.add(update);
-    }
-    yield List.unmodifiable(currentTasks);
-  }
+final tasksProvider = StateNotifierProvider<TasksNotifier, AsyncValue<List<MatrixTask>>>((ref) {
+  return TasksNotifier(ref);
 });
+
+class TasksNotifier extends StateNotifier<AsyncValue<List<MatrixTask>>> {
+  final Ref ref;
+  StreamSubscription? _subscription;
+
+  TasksNotifier(this.ref) : super(const AsyncValue.loading()) {
+    _init();
+  }
+
+  Future<void> _init() async {
+    final data = ref.read(dataProvider);
+    final auth = ref.read(authProvider);
+    
+    if (!auth.isAuthenticated) {
+      state = const AsyncValue.data([]);
+      return;
+    }
+
+    final workspaceId = auth.currentWorkspace?.id ?? 'default';
+    
+    try {
+      final initialTasks = await data.getTasks(workspaceId);
+      state = AsyncValue.data(initialTasks);
+
+      _subscription?.cancel();
+      _subscription = data.taskUpdates.listen((update) {
+        state.whenData((tasks) {
+          final currentTasks = List<MatrixTask>.from(tasks);
+          final index = currentTasks.indexWhere((t) => t.id == update.id);
+          if (index != -1) {
+            currentTasks[index] = update;
+          } else {
+            // Only add if it belongs to the current workspace
+            if (update.workspaceId == workspaceId) {
+              currentTasks.add(update);
+            }
+          }
+          state = AsyncValue.data(currentTasks);
+        });
+      });
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> refresh() => _init();
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+}

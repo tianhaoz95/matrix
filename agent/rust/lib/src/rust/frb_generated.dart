@@ -91,13 +91,17 @@ abstract class RustLibApi extends BaseApi {
     required String targetPath,
   });
 
-  Future<String> crateApiSimpleExecuteCommand({required String cmd});
+  Stream<String> crateApiSimpleExecuteCommand({required String cmd});
 
   String crateApiSimpleGreet({required String name});
 
   Future<void> crateApiSimpleInitApp();
 
+  Future<List<HardwareDevice>> crateApiSimpleListHardwareDevices();
+
   Future<List<String>> crateApiSimpleListFilesRecursive({required String path});
+
+  Future<String> crateApiSimpleGenerateCodebaseMap({required String path});
 
   Stream<TaskUpdateEvent> crateApiSimpleListenMcpEvents();
 
@@ -223,32 +227,65 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<String> crateApiSimpleExecuteCommand({required String cmd}) {
+  Stream<String> crateApiSimpleExecuteCommand({required String cmd}) {
+    final sink = RustStreamSink<String>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_StreamSink_String_Sse(sink, serializer);
+            sse_encode_String(cmd, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 4,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiSimpleExecuteCommandConstMeta,
+          argValues: [sink, cmd],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiSimpleExecuteCommandConstMeta =>
+      const TaskConstMeta(debugName: "execute_command", argNames: ["cmd"]);
+
+  @override
+  Future<List<HardwareDevice>> crateApiSimpleListHardwareDevices() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(cmd, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 13,
             port: port_,
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_String,
+          decodeSuccessData: sse_decode_list_hardware_device,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiSimpleExecuteCommandConstMeta,
-        argValues: [cmd],
+        constMeta: kCrateApiSimpleListHardwareDevicesConstMeta,
+        argValues: [],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiSimpleExecuteCommandConstMeta =>
-      const TaskConstMeta(debugName: "execute_command", argNames: ["cmd"]);
+  TaskConstMeta get kCrateApiSimpleListHardwareDevicesConstMeta =>
+      const TaskConstMeta(
+          debugName: "list_hardware_devices", argNames: []);
 
   @override
   String crateApiSimpleGreet({required String name}) {
@@ -330,6 +367,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiSimpleListFilesRecursiveConstMeta =>
       const TaskConstMeta(
         debugName: "list_files_recursive",
+        argNames: ["path"],
+      );
+
+  @override
+  Future<String> crateApiSimpleGenerateCodebaseMap({
+    required String path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 12,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSimpleGenerateCodebaseMapConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSimpleGenerateCodebaseMapConstMeta =>
+      const TaskConstMeta(
+        debugName: "generate_codebase_map",
         argNames: ["path"],
       );
 
@@ -567,6 +637,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<HardwareDevice> sse_decode_list_hardware_device(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <HardwareDevice>[];
+    for (var i = 0; i < len_; ++i) {
+      ans_.add(sse_decode_hardware_device(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  HardwareDevice sse_decode_hardware_device(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_connectionType = sse_decode_String(deserializer);
+    var var_status = sse_decode_String(deserializer);
+    return HardwareDevice(
+        id: var_id,
+        name: var_name,
+        connectionType: var_connectionType,
+        status: var_status);
+  }
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -651,6 +747,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_StreamSink_String_Sse(
+    RustStreamSink<String> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_StreamSink_task_update_event_Sse(
     RustStreamSink<TaskUpdateEvent> self,
     SseSerializer serializer,
@@ -677,6 +790,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_i_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putInt32(self);
+  }
+
+  @protected
+  void sse_encode_list_hardware_device(
+    List<HardwareDevice> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_hardware_device(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_hardware_device(
+    HardwareDevice self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.connectionType, serializer);
+    sse_encode_String(self.status, serializer);
   }
 
   @protected

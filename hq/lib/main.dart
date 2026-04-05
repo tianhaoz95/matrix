@@ -23,11 +23,7 @@ Future<void> main() async {
     // .env might not exist in all environments, fallback to defaults in provider
   }
   
-  final container = ProviderContainer();
-  // Start the Brain service
-  container.read(matrixBrainProvider).start();
-
-  runApp(UncontrolledProviderScope(container: container, child: const MatrixHQApp()));
+  runApp(const ProviderScope(child: MatrixHQApp()));
 }
 
 class MatrixHQApp extends ConsumerWidget {
@@ -59,11 +55,24 @@ class MatrixHQApp extends ConsumerWidget {
   }
 }
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(matrixBrainProvider).start();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
       body: Stack(
@@ -148,7 +157,7 @@ class _OracleFeed extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tasksValue = ref.watch(tasksStreamProvider);
+    final tasksValue = ref.watch(tasksProvider);
 
     return Container(
       height: 120,
@@ -275,7 +284,7 @@ class _UpdateCard extends StatelessWidget {
 class _MatrixKanban extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tasksValue = ref.watch(tasksStreamProvider);
+    final tasksValue = ref.watch(tasksProvider);
     final columns = [
       'Draft',
       'Interpreted',

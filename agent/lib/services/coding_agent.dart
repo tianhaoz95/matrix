@@ -17,11 +17,11 @@ class CodingAgent {
     logs.addLog('> [CodingAgent] Starting task with standardized executor: ${task.title}');
 
     // 1. Context Retrieval (Optional grounding)
-    List<String> files = [];
+    String codebaseMap = '';
     if (workingDir != null) {
-      logs.addLog('> [CodingAgent] Contextualizing isolated worktree...');
-      files = await rustCore.listFilesRecursive(path: workingDir);
-      logs.addLog('> [CodingAgent] Grounded with ${files.length} files.');
+      logs.addLog('> [CodingAgent] Mapping codebase for context...');
+      codebaseMap = await rustCore.generateCodebaseMap(path: workingDir);
+      logs.addLog('> [CodingAgent] Codebase map generated.');
     }
 
     // 2. Map Provider
@@ -29,16 +29,19 @@ class CodingAgent {
     
     // 3. Prepare Prompt
     final prompt = '''
-Task: "${task.title}"
-Instructions: "${task.description}"
-Working Directory: ${workingDir ?? 'Current'}
+TASK: "${task.title}"
+INSTRUCTIONS: "${task.description}"
+WORKING_DIRECTORY: ${workingDir ?? 'Current'}
 
-Files in scope:
-${files.take(20).join('\n')}
-${files.length > 20 ? '... and ${files.length - 20} more' : ''}
+CODEBASE_CONTEXT:
+$codebaseMap
 
-Please fulfill this task using the available tools.
+GOAL:
+Execute the instructions provided. Use 'run_shell_command' to explore, build, test, and modify the code.
+If you need to report progress or status back to the HQ, use the 'matrix_update_task' tool.
+When you are completely finished, provide a final summary of your work.
 ''';
+
 
     try {
       logs.addLog('> [CodingAgent] Spawning AI Backend: ${settings.selectedCodingAgent}...');

@@ -1,4 +1,5 @@
 use anyhow::Result;
+use tokio::io::AsyncBufReadExt;
 use executors::command::CommandBuilder;
 use tokio::process::Command;
 use std::path::{Path, PathBuf};
@@ -17,11 +18,91 @@ pub fn greet(name: String) -> String {
     format!("Hello, {name}!")
 }
 
-pub async fn execute_command(cmd: String) -> String {
-    match run_command_internal(cmd).await {
-        Ok(output) => output,
-        Err(e) => format!("Error: {}", e),
+pub async fn execute_command(cmd: String, sink: StreamSink<String>) -> Result<()> {
+    let builder = CommandBuilder::new(cmd);
+    let parts = builder.build_initial()?;
+    let (program, args) = parts.into_resolved().await?;
+
+    let mut child = Command::new(program)
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    let mut stdout_reader = tokio::io::BufReader::new(stdout).lines();
+    let mut stderr_reader = tokio::io::BufReader::new(stderr).lines();
+
+    let sink_clone = sink.clone();
+    tokio::spawn(async move {
+        while let Ok(Some(line)) = stdout_reader.next_line().await {
+            let _ = sink_clone.add(line);
+        }
+    });
+
+    let sink_clone2 = sink.clone();
+    tokio::spawn(async move {
+        while let Ok(Some(line)) = stderr_reader.next_line().await {
+            let _ = sink_clone2.add(format!("ERR: {}", line));
+        }
+    });
+
+    let status = child.wait().await?;
+    let _ = sink.add(format!("Process finished with status: {}", status));
+    
+    Ok(())
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct HardwareDevice {
+    pub id: String,
+    pub name: String,
+    pub connection_type: String, // "ADB", "USB", "Network"
+    pub status: String,          // "Online", "Offline", "Unauthorized"
+}
+
+pub async fn list_hardware_devices() -> Vec<HardwareDevice> {
+    let mut devices = Vec::new();
+
+    // 1. ADB Devices
+    if let Ok(output) = Command::new("adb").arg("devices").output().await {
+        let s = String::from_utf8_lossy(&output.stdout);
+        for line in s.lines().skip(1) {
+            if !line.trim().is_empty() {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    devices.push(HardwareDevice {
+                        id: parts[0].to_string(),
+                        name: format!("Android Device ({})", parts[0]),
+                        connection_type: "ADB".to_string(),
+                        status: parts[1].to_string(),
+                    });
+                }
+            }
+        }
     }
+
+    // 2. USB Devices (Linux specific)
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(output) = Command::new("lsusb").output().await {
+            let s = String::from_utf8_lossy(&output.stdout);
+            for line in s.lines() {
+                if !line.trim().is_empty() {
+                    devices.push(HardwareDevice {
+                        id: line[4..13].trim().to_string(), // Extract Bus/Device IDs
+                        name: line[33..].trim().to_string(), // Extract Manufacturer/Product
+                        connection_type: "USB".to_string(),
+                        status: "Connected".to_string(),
+                    });
+                }
+            }
+        }
+    }
+
+    devices
 }
 
 pub async fn scan_system() -> String {
@@ -124,6 +205,60 @@ pub fn list_files_recursive(path: String) -> Vec<String> {
     files
 }
 
+pub async fn generate_codebase_map(path: String) -> String {
+    let root = Path::new(&path);
+    let mut map = Vec::new();
+    map.push(format!("# Codebase Map: {}", path));
+
+    // 1. Project Type Detection
+    let mut project_types = Vec::new();
+    if root.join("pubspec.yaml").exists() { project_types.push("Flutter/Dart"); }
+    if root.join("Cargo.toml").exists() { project_types.push("Rust"); }
+    if root.join("package.json").exists() { project_types.push("Node.js/TypeScript"); }
+    if root.join("requirements.txt").exists() || root.join("pyproject.toml").exists() { project_types.push("Python"); }
+    
+    map.push(format!("**Detected Stack**: {}", project_types.join(", ")));
+    map.push("\n## Key Files".to_string());
+
+    // 2. Identify Entry Points & Configs
+    let important_patterns = [
+        "lib/main.dart",
+        "src/main.rs",
+        "src/lib.rs",
+        "src/index.ts",
+        "src/app.py",
+        "pubspec.yaml",
+        "Cargo.toml",
+        "package.json",
+        "AndroidManifest.xml",
+        "README.md",
+    ];
+
+    for pattern in important_patterns {
+        let p = root.join(pattern);
+        if p.exists() {
+            map.push(format!("- `{}`: Identified as a key entry/config file.", pattern));
+        }
+    }
+
+    // 3. Structure Summary (Top level dirs)
+    map.push("\n## Directory Structure".to_string());
+    if let Ok(entries) = fs::read_dir(root) {
+        for entry in entries.flatten() {
+            if let Ok(ft) = entry.file_type() {
+                if ft.is_dir() {
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    if !workspace_utils::path::ALWAYS_SKIP_DIRS.contains(&name.as_str()) {
+                        map.push(format!("- `{}/`: Directory", name));
+                    }
+                }
+            }
+        }
+    }
+
+    map.join("\n")
+}
+
 // --- AI Agent Execution (Standardized) ---
 
 pub enum MatrixAIProvider {
@@ -141,15 +276,30 @@ pub async fn run_agent_task(provider: MatrixAIProvider, prompt: String, working_
 
     let configs = ExecutorConfigs::get_cached();
     let profile_id = ExecutorProfileId::new(agent_type);
-    let agent = configs.get_coding_agent_or_default(&profile_id);
+    let mut agent = configs.get_coding_agent_or_default(&profile_id);
     
+    // Ensure YOLO is enabled if using Gemini CLI for autonomy
+    if let MatrixAIProvider::Gemini = provider {
+        if let CodingAgent::Gemini(ref mut g) = agent {
+            g.yolo = Some(true);
+        }
+    }
+
     let env = ExecutionEnv::new(RepoContext::default(), false, String::new());
     let path = Path::new(&working_dir);
+
+    tracing::info!("Spawning agent task in {}", working_dir);
 
     match agent.spawn(path, &prompt, &env).await {
         Ok(mut spawned) => {
             match spawned.child.wait().await {
-                Ok(status) => format!("Agent finished with status: {}", status),
+                Ok(status) => {
+                    if status.success() {
+                        format!("Agent finished successfully")
+                    } else {
+                        format!("Agent finished with error status: {}", status)
+                    }
+                },
                 Err(e) => format!("Agent execution error: {}", e),
             }
         },

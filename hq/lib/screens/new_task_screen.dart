@@ -14,18 +14,21 @@ class NewTaskScreen extends ConsumerStatefulWidget {
 class _NewTaskScreenState extends ConsumerState<NewTaskScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _repoController = TextEditingController();
   bool _isSubmitting = false;
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _repoController.dispose();
     super.dispose();
   }
 
   Future<void> _submitTask() async {
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
+    final repositoryUrl = _repoController.text.trim();
 
     if (title.isEmpty || description.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -47,6 +50,7 @@ class _NewTaskScreenState extends ConsumerState<NewTaskScreen> {
         description: description,
         status: 'Draft',
         priority: 'high',
+        repositoryUrl: repositoryUrl.isNotEmpty ? repositoryUrl : null,
       );
 
       await data.createTask(newTask);
@@ -130,7 +134,7 @@ class _NewTaskScreenState extends ConsumerState<NewTaskScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Project',
+                        'Project Name',
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
@@ -143,8 +147,8 @@ class _NewTaskScreenState extends ConsumerState<NewTaskScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: const [
-                            Text('Glacier Core', style: TextStyle(fontSize: 14)),
-                            Icon(Icons.keyboard_arrow_down, size: 16),
+                            Text('Glacier Core', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                            Icon(Icons.lock_outline, size: 16, color: Colors.grey),
                           ],
                         ),
                       ),
@@ -157,22 +161,20 @@ class _NewTaskScreenState extends ConsumerState<NewTaskScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Repository',
+                        'Repository URL',
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: SnowscapeColors.surfaceContainerLowest,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: const [
-                            Text('matrix-hq-v2', style: TextStyle(fontSize: 14)),
-                            Icon(Icons.keyboard_arrow_down, size: 16),
-                          ],
+                      TextField(
+                        controller: _repoController,
+                        decoration: InputDecoration(
+                          hintText: 'https://github.com/...',
+                          filled: true,
+                          fillColor: SnowscapeColors.surfaceContainerLowest,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
                       ),
                     ],

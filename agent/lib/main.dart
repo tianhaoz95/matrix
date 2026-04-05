@@ -26,9 +26,9 @@ class LogsNotifier extends Notifier<List<String>> {
 final logsProvider = NotifierProvider<LogsNotifier, List<String>>(LogsNotifier.new);
 
 // Capability state provider
-class CapabilitiesNotifier extends Notifier<List<String>> {
+class CapabilitiesNotifier extends Notifier<List<HardwareDevice>> {
   @override
-  List<String> build() => [];
+  List<HardwareDevice> build() => [];
 
   void setCapabilities(String report) {
     // Basic parser for the markdown report
@@ -37,11 +37,21 @@ class CapabilitiesNotifier extends Notifier<List<String>> {
         .where((l) => l.startsWith('- '))
         .map((l) => l.replaceFirst('- ', '').replaceAll('**', ''))
         .toList();
-    state = lines;
+    
+    state = lines.map((l) => HardwareDevice(
+      id: l,
+      name: l,
+      connectionType: 'System',
+      status: 'Available',
+    )).toList();
+  }
+
+  void setDevices(List<HardwareDevice> devices) {
+    state = devices;
   }
 }
 
-final capabilitiesProvider = NotifierProvider<CapabilitiesNotifier, List<String>>(CapabilitiesNotifier.new);
+final capabilitiesProvider = NotifierProvider<CapabilitiesNotifier, List<HardwareDevice>>(CapabilitiesNotifier.new);
 
 // Worktree state provider
 class WorktreeNotifier extends Notifier<String?> {
@@ -138,15 +148,19 @@ class _OperatorDashboardState extends ConsumerState<OperatorDashboard> {
   Future<void> _runAgent() async {
     final settings = ref.read(modelSettingsProvider);
     final logs = ref.read(logsProvider.notifier);
+    final rust = ref.read(rustProvider);
 
     if (settings.selectedModel == 'Coding Agents' &&
         settings.selectedCodingAgent == 'Gemini CLI') {
       logs.addLog('> Starting Gemini CLI Agent...');
       logs.addLog('> Running: gemini --yolo -p "hi"');
       try {
-        // Execute the command via Rust core
-        final output = await executeCommand(cmd: 'gemini --yolo -p "hi"');
-        logs.addLog(output);
+        // Execute the command via Rust core and listen to stream
+        rust.executeCommand(cmd: 'gemini --yolo -p "hi"').listen((log) {
+          logs.addLog(log);
+        }, onError: (e) {
+          logs.addLog('> Error: $e');
+        });
       } catch (e) {
         logs.addLog('> Error starting agent: $e');
       }
@@ -158,6 +172,21 @@ class _OperatorDashboardState extends ConsumerState<OperatorDashboard> {
         modelName = settings.selectedCloudModel;
       }
       logs.addLog('> [$modelName] Not implemented yet.');
+    }
+  }
+
+  Future<void> _refreshHardware() async {
+    final rust = ref.read(rustProvider);
+    final caps = ref.read(capabilitiesProvider.notifier);
+    final logs = ref.read(logsProvider.notifier);
+    
+    logs.addLog('> Refreshing hardware status...');
+    try {
+      final devices = await rust.listHardwareDevices();
+      caps.setDevices(devices);
+      logs.addLog('> Hardware status updated: ${devices.length} entries.');
+    } catch (e) {
+      logs.addLog('> Hardware refresh error: $e');
     }
   }
 
@@ -231,7 +260,7 @@ class _OperatorDashboardState extends ConsumerState<OperatorDashboard> {
                         ),
                         _IconButtonSmall(
                           icon: Icons.refresh,
-                          onPressed: _autoCapabilityCheck,
+                          onPressed: _refreshHardware,
                         ),
                       ],
                     ),
@@ -249,7 +278,7 @@ class _OperatorDashboardState extends ConsumerState<OperatorDashboard> {
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             itemCount: capabilities.length,
                             itemBuilder: (context, index) {
-                              return _buildCapabilityTile(Icons.check_circle_outline, capabilities[index]);
+                              return _buildCapabilityTile(capabilities[index]);
                             },
                           ),
                   ),
@@ -372,7 +401,21 @@ class _OperatorDashboardState extends ConsumerState<OperatorDashboard> {
     );
   }
 
-  Widget _buildCapabilityTile(IconData icon, String label) {
+  Widget _buildCapabilityTile(HardwareDevice device) {
+    IconData icon = Icons.check_circle_outline;
+    Color statusColor = Colors.green;
+
+    if (device.connectionType == 'ADB') {
+      icon = Icons.android;
+    } else if (device.connectionType == 'USB') {
+      icon = Icons.usb;
+    }
+
+    if (device.status.toLowerCase().contains('offline') || 
+        device.status.toLowerCase().contains('unauthorized')) {
+      statusColor = Colors.orange;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -385,13 +428,40 @@ class _OperatorDashboardState extends ConsumerState<OperatorDashboard> {
           Icon(icon, size: 20, color: SnowscapeColors.primary),
           const SizedBox(width: 12),
           Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  device.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '${device.connectionType} • ${device.id}',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
+              device.status.toUpperCase(),
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: statusColor,
               ),
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

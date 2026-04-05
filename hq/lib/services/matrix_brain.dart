@@ -29,7 +29,7 @@ class MatrixBrain {
 
   void start() {
     _subscription?.close();
-    _subscription = ref.listen(tasksStreamProvider, (previous, next) {
+    _subscription = ref.listen(tasksProvider, (previous, next) {
       final tasks = next.value;
       if (tasks != null) {
         processTasks(tasks);

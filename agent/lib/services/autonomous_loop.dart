@@ -6,6 +6,8 @@ import 'package:msp/msp.dart';
 import '../providers.dart';
 import '../main.dart';
 import 'coding_agent.dart';
+import 'oracle_service.dart';
+import 'architect_service.dart';
 import 'package:path/path.dart' as p;
 
 class AutonomousLoop {
@@ -25,7 +27,9 @@ class AutonomousLoop {
         _checkAndExecute(tasks);
       }
     }, fireImmediately: true);
-    ref.read(logsProvider.notifier).addLog('> Autonomous loop started. Watching for tasks...');
+    
+    final persona = ref.read(modelSettingsProvider).selectedPersona;
+    ref.read(logsProvider.notifier).addLog('> Autonomous loop started [$persona mode].');
     
     _ensureMcpServerStarted();
   }
@@ -77,7 +81,34 @@ class AutonomousLoop {
   Future<void> _checkAndExecute(List<MatrixTask> tasks) async {
     if (_isProcessing) return;
 
-    final task = tasks.where((t) => t.status.toLowerCase() == 'ready_for_execution' || t.status.toLowerCase() == 'backlog').firstOrNull;
+    final settings = ref.read(modelSettingsProvider);
+    final persona = settings.selectedPersona;
+
+    if (persona == 'The Oracle') {
+      final draft = tasks.where((t) => t.status.toLowerCase() == 'draft').firstOrNull;
+      if (draft != null) {
+        _isProcessing = true;
+        await ref.read(oracleServiceProvider).runOracle(draft);
+        _isProcessing = false;
+      }
+      return;
+    }
+
+    if (persona == 'The Architect') {
+      final interpreted = tasks.where((t) => t.status.toLowerCase() == 'interpreted').firstOrNull;
+      if (interpreted != null) {
+        _isProcessing = true;
+        await ref.read(architectServiceProvider).runArchitect(interpreted);
+        _isProcessing = false;
+      }
+      return;
+    }
+
+    // Default Agent Logic
+    final task = tasks.where((t) {
+      final status = t.status.toLowerCase();
+      return status == 'ready_for_execution' || status == 'backlog' || status == 'ready';
+    }).firstOrNull;
     if (task == null) return;
 
     _isProcessing = true;
@@ -149,7 +180,7 @@ class AutonomousLoop {
       // 4. Execution Loop with Reasoning
       logs.addLog('> [Autonomous] Triggering AI reasoning...');
       final result = await agent.executeWithReasoning(inProgressTask, workingDir: executionDir);
-      logs.addLog('> [Autonomous] Final Result: $result');
+      logs.addLog('> [Autonomous] AI reasoning complete.');
 
       // 5. Mark for Validation
       final completedTask = inProgressTask.copyWith(

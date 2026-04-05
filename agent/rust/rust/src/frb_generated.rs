@@ -188,13 +188,85 @@ fn wire__crate__api__simple__execute_command_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_sink = StreamSink::<String, flutter_rust_bridge::for_generated::SseCodec>::deserialize(
+                <String>::sse_decode(&mut deserializer),
+            );
             let api_cmd = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    crate::api::simple::execute_command(api_cmd, api_sink).await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__simple__list_hardware_devices_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "list_hardware_devices",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, ()>(
                     (move || async move {
                         let output_ok = Result::<_, ()>::Ok(
-                            crate::api::simple::execute_command(api_cmd).await,
+                            crate::api::simple::list_hardware_devices().await,
+                        )?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__simple__generate_codebase_map_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "generate_codebase_map",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_path = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, ()>(
+                    (move || async move {
+                        let output_ok = Result::<_, ()>::Ok(
+                            crate::api::simple::generate_codebase_map(api_path).await,
                         )?;
                         Ok(output_ok)
                     })()
@@ -613,6 +685,8 @@ fn pde_ffi_dispatcher_primary_impl(
         9 => wire__crate__api__simple__run_agent_task_impl(port, ptr, rust_vec_len, data_len),
         10 => wire__crate__api__simple__scan_system_impl(port, ptr, rust_vec_len, data_len),
         11 => wire__crate__api__simple__start_mcp_server_impl(port, ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__simple__generate_codebase_map_impl(port, ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__simple__list_hardware_devices_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -742,6 +816,54 @@ impl SseEncode for crate::api::simple::MatrixAIProvider {
             },
             serializer,
         );
+    }
+}
+
+impl SseDecode for crate::api::simple::HardwareDevice {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let var_id = <String>::sse_decode(deserializer);
+        let var_name = <String>::sse_decode(deserializer);
+        let var_connectionType = <String>::sse_decode(deserializer);
+        let var_status = <String>::sse_decode(deserializer);
+        Self {
+            id: var_id,
+            name: var_name,
+            connection_type: var_connectionType,
+            status: var_status,
+        }
+    }
+}
+
+impl SseDecode for Vec<crate::api::simple::HardwareDevice> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::new();
+        for _ in 0..len_ {
+            ans_.push(<crate::api::simple::HardwareDevice>::sse_decode(deserializer));
+        }
+        ans_
+    }
+}
+
+impl SseEncode for crate::api::simple::HardwareDevice {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.name, serializer);
+        <String>::sse_encode(self.connection_type, serializer);
+        <String>::sse_encode(self.status, serializer);
+    }
+}
+
+impl SseEncode for Vec<crate::api::simple::HardwareDevice> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::simple::HardwareDevice>::sse_encode(item, serializer);
+        }
     }
 }
 

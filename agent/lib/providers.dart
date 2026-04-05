@@ -56,7 +56,7 @@ final dataProvider = Provider<IDataProvider>((ref) {
   final client = ref.watch(appwriteClientProvider);
   return AppwriteDataProvider(
     client: client,
-    databaseId: 'main',
+    databaseId: Environment.appwriteDatabaseId,
     tasksCollectionId: 'tasks',
     agentsCollectionId: 'agents',
     messagesCollectionId: 'messages',
@@ -93,7 +93,8 @@ final assignedTasksProvider = StreamProvider<List<MatrixTask>>((ref) async* {
 
 // Rust Core Provider for Mocking
 class RustCore {
-  Future<String> executeCommand({required String cmd}) => rust.executeCommand(cmd: cmd);
+  Stream<String> executeCommand({required String cmd}) => rust.executeCommand(cmd: cmd);
+  Future<List<rust.HardwareDevice>> listHardwareDevices() => rust.listHardwareDevices();
   Future<String> scanSystem() => rust.scanSystem();
   Future<String> automaticCapabilityCheck() => rust.automaticCapabilityCheck();
   Future<String> cloneRepository({required String url, required String targetPath}) => 
@@ -101,6 +102,7 @@ class RustCore {
   Future<String> createAgentWorktree({required String repoPath, required String branchName, required String targetPath}) =>
       rust.createAgentWorktree(repoPath: repoPath, branchName: branchName, targetPath: targetPath);
   Future<List<String>> listFilesRecursive({required String path}) => rust.listFilesRecursive(path: path);
+  Future<String> generateCodebaseMap({required String path}) => rust.generateCodebaseMap(path: path);
   Future<String> startMcpServer({required int port}) => rust.startMcpServer(port: port);
   Stream<rust.TaskUpdateEvent> listenMcpEvents() => rust.listenMcpEvents();
   Future<String> runAgentTask({required rust.MatrixAIProvider provider, required String prompt, required String workingDir}) =>
@@ -114,12 +116,14 @@ class ModelSettings {
   final String selectedModel;
   final String selectedCodingAgent;
   final String selectedCloudModel;
+  final String selectedPersona;
   final String openAiUrl;
 
   ModelSettings({
     required this.selectedModel,
     required this.selectedCodingAgent,
     required this.selectedCloudModel,
+    required this.selectedPersona,
     required this.openAiUrl,
   });
 
@@ -127,12 +131,14 @@ class ModelSettings {
     String? selectedModel,
     String? selectedCodingAgent,
     String? selectedCloudModel,
+    String? selectedPersona,
     String? openAiUrl,
   }) {
     return ModelSettings(
       selectedModel: selectedModel ?? this.selectedModel,
       selectedCodingAgent: selectedCodingAgent ?? this.selectedCodingAgent,
       selectedCloudModel: selectedCloudModel ?? this.selectedCloudModel,
+      selectedPersona: selectedPersona ?? this.selectedPersona,
       openAiUrl: openAiUrl ?? this.openAiUrl,
     );
   }
@@ -145,6 +151,7 @@ class ModelSettingsNotifier extends Notifier<ModelSettings> {
       selectedModel: 'OpenAI API',
       selectedCodingAgent: 'Gemini CLI',
       selectedCloudModel: 'Gemini 3 Flash',
+      selectedPersona: 'Agent',
       openAiUrl: 'https://api.openai.com/v1',
     );
   }
@@ -159,6 +166,10 @@ class ModelSettingsNotifier extends Notifier<ModelSettings> {
 
   void updateCloudModel(String model) {
     state = state.copyWith(selectedCloudModel: model);
+  }
+
+  void updatePersona(String persona) {
+    state = state.copyWith(selectedPersona: persona);
   }
 
   void updateOpenAiUrl(String url) {

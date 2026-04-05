@@ -14,10 +14,41 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 String greet({required String name}) =>
     RustLib.instance.api.crateApiSimpleGreet(name: name);
 
-Future<String> executeCommand({required String cmd}) =>
+Stream<String> executeCommand({required String cmd}) =>
     RustLib.instance.api.crateApiSimpleExecuteCommand(cmd: cmd);
 
+Future<List<HardwareDevice>> listHardwareDevices() =>
+    RustLib.instance.api.crateApiSimpleListHardwareDevices();
+
 Future<String> scanSystem() => RustLib.instance.api.crateApiSimpleScanSystem();
+
+class HardwareDevice {
+  final String id;
+  final String name;
+  final String connectionType;
+  final String status;
+
+  const HardwareDevice({
+    required this.id,
+    required this.name,
+    required this.connectionType,
+    required this.status,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^ name.hashCode ^ connectionType.hashCode ^ status.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HardwareDevice &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          connectionType == other.connectionType &&
+          status == other.status;
+}
 
 Future<String> automaticCapabilityCheck() =>
     RustLib.instance.api.crateApiSimpleAutomaticCapabilityCheck();
@@ -42,6 +73,9 @@ Future<String> createAgentWorktree({
 
 Future<List<String>> listFilesRecursive({required String path}) =>
     RustLib.instance.api.crateApiSimpleListFilesRecursive(path: path);
+
+Future<String> generateCodebaseMap({required String path}) =>
+    RustLib.instance.api.crateApiSimpleGenerateCodebaseMap(path: path);
 
 Future<String> runAgentTask({
   required MatrixAIProvider provider,

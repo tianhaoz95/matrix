@@ -24,10 +24,12 @@ Future<void> main() async {
   print('Target Project ID: $projectId');
   print('Endpoint: $endpoint');
 
-  // 1. Create Platforms (Allowing Android apps to connect)
+  // 1. Create Platforms (Allowing apps to connect)
   final platforms = [
     {'type': 'android', 'name': 'HQ Android', 'key': 'com.hejitech.hq'},
     {'type': 'android', 'name': 'Agent Android', 'key': 'com.hejitech.agent'},
+    {'type': 'linux', 'name': 'HQ Linux', 'key': 'com.hejitech.hq'},
+    {'type': 'linux', 'name': 'Agent Linux', 'key': 'com.hejitech.agent'},
   ];
 
   for (final platform in platforms) {
@@ -101,6 +103,7 @@ Future<void> main() async {
         {'key': 'priority', 'type': 'string', 'size': 50, 'required': true},
         {'key': 'assigned_to', 'type': 'string', 'size': 50, 'required': false},
         {'key': 'parent_task_id', 'type': 'string', 'size': 50, 'required': false},
+        {'key': 'repository_url', 'type': 'string', 'size': 500, 'required': false},
         {'key': 'artifacts', 'type': 'string', 'size': 255, 'required': false, 'array': true},
       ]
     },

@@ -257,9 +257,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildPersonaButton(String name, IconData icon) {
-    final isSelected = _selectedPersona == name;
+    final settings = ref.watch(modelSettingsProvider);
+    final isSelected = settings.selectedPersona == name;
     return InkWell(
-      onTap: () => setState(() => _selectedPersona = name),
+      onTap: () => ref.read(modelSettingsProvider.notifier).updatePersona(name),
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),

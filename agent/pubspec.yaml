@@ -22,12 +22,14 @@ dependencies:
     path: rust
   dart_appwrite: ^22.0.0
   path: ^1.9.1
+  google_generative_ai: ^0.4.7
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   integration_test:
     sdk: flutter
+  mocktail: ^1.0.4
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
 
