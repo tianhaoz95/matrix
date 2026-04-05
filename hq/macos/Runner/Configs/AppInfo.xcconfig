@@ -8,7 +8,7 @@
 PRODUCT_NAME = hq
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.hq
+PRODUCT_BUNDLE_IDENTIFIER = com.hejitech.hq
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.hejitech. All rights reserved.

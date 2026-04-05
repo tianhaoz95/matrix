@@ -1,4 +1,4 @@
-package com.example.rust
+package com.hejitech.rust
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -26,8 +26,8 @@ Future<void> main() async {
 
   // 1. Create Platforms (Allowing Android apps to connect)
   final platforms = [
-    {'type': 'android', 'name': 'HQ Android', 'key': 'com.example.hq'},
-    {'type': 'android', 'name': 'Agent Android', 'key': 'com.example.agent'},
+    {'type': 'android', 'name': 'HQ Android', 'key': 'com.hejitech.hq'},
+    {'type': 'android', 'name': 'Agent Android', 'key': 'com.hejitech.agent'},
   ];
 
   for (final platform in platforms) {

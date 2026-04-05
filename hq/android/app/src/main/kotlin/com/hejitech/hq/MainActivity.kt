@@ -1,4 +1,4 @@
-package com.example.hq
+package com.hejitech.hq
 
 import io.flutter.embedding.android.FlutterActivity
 
